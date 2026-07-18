@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import {
   BarChart3,
@@ -13,7 +13,6 @@ import {
   Settings,
   LogOut,
   Home,
-  ChevronLeft,
 } from 'lucide-react';
 import type { ViewType } from '@/lib/types';
 

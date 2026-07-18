@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -91,18 +91,26 @@ const slideUp = {
 // ─── 1. Particles ─────────────────────────────────────────────────────────────
 
 function Particles() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const particles = useMemo(
     () =>
       Array.from({ length: 18 }, (_, i) => ({
         id: i,
-        left: `${Math.random() * 100}%`,
-        size: 1 + Math.random() * 2,
-        duration: 8 + Math.random() * 12,
-        delay: Math.random() * 10,
-        opacity: 0.3 + Math.random() * 0.5,
+        left: `${((i * 37 + 13) % 100)}%`,
+        size: 1 + ((i * 7 + 3) % 20) / 10,
+        duration: 8 + ((i * 11 + 5) % 120) / 10,
+        delay: ((i * 17 + 2) % 100) / 10,
+        opacity: 0.3 + ((i * 23 + 7) % 50) / 100,
       })),
     []
   );
+
+  if (!mounted) return null;
 
   return (
     <div className="fixed inset-0 z-[3] overflow-hidden pointer-events-none">
