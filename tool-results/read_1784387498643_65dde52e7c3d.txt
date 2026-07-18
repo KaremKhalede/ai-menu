@@ -1,0 +1,1186 @@
+   100→        delay: Math.random() * 10,
+   101→        opacity: 0.3 + Math.random() * 0.5,
+   102→      })),
+   103→    []
+   104→  );
+   105→
+   106→  return (
+   107→    <div className="fixed inset-0 z-[3] overflow-hidden pointer-events-none">
+   108→      {particles.map((p) => (
+   109→        <div
+   110→          key={p.id}
+   111→          className="particle"
+   112→          style={{
+   113→            left: p.left,
+   114→            bottom: '-10px',
+   115→            width: `${p.size}px`,
+   116→            height: `${p.size}px`,
+   117→            animationDuration: `${p.duration}s`,
+   118→            animationDelay: `${p.delay}s`,
+   119→            opacity: p.opacity,
+   120→            background: `rgba(201, 164, 108, ${p.opacity})`,
+   121→          }}
+   122→        />
+   123→      ))}
+   124→    </div>
+   125→  );
+   126→}
+   127→
+   128→// ─── 2. BackgroundLayer ───────────────────────────────────────────────────────
+   129→
+   130→function BackgroundLayer() {
+   131→  return (
+   132→    <div className="fixed inset-0 z-0 overflow-hidden">
+   133→      <motion.div
+   134→        className="absolute inset-0"
+   135→        style={{
+   136→          background:
+   137→            'linear-gradient(135deg, #0F0F0F 0%, #1a0f0a 25%, #0a0f1a 50%, #1a0f0a 75%, #0F0F0F 100%)',
+   138→          backgroundSize: '400% 400%',
+   139→        }}
+   140→        animate={{
+   141→          backgroundPosition: [
+   142→            '0% 0%',
+   143→            '100% 50%',
+   144→            '50% 100%',
+   145→            '0% 0%',
+   146→          ],
+   147→        }}
+   148→        transition={{
+   149→          duration: 20,
+   150→          ease: 'linear',
+   151→          repeat: Infinity,
+   152→          repeatType: 'loop',
+   153→        }}
+   154→      />
+   155→      <div className="absolute inset-0 video-overlay" />
+   156→    </div>
+   157→  );
+   158→}
+   159→
+   160→// ─── 3. Navigation ────────────────────────────────────────────────────────────
+   161→
+   162→function Navigation() {
+   163→  const { mobileMenuOpen, setMobileMenuOpen } = useServioStore();
+   164→
+   165→  const navLinks = [
+   166→    { label: 'القائمة', href: '#القائمة' },
+   167→    { label: 'رؤى الذكاء', href: '#رؤى-الذكاء' },
+   168→    { label: 'الأسعار', href: '#الأسعار' },
+   169→  ];
+   170→
+   171→  return (
+   172→    <>
+   173→      <motion.nav
+   174→        className="fixed top-0 z-50 w-full py-4 px-6"
+   175→        initial={{ y: -20, opacity: 0 }}
+   176→        animate={{ y: 0, opacity: 1 }}
+   177→        transition={{ duration: 0.7, delay: 0.1 }}
+   178→      >
+   179→        <div className="max-w-7xl mx-auto flex items-center justify-between">
+   180→          {/* Logo */}
+   181→          <motion.span
+   182→            className="font-playfair text-xl font-bold gold-text select-none"
+   183→            whileHover={{ scale: 1.03 }}
+   184→            transition={{ type: 'spring', stiffness: 400 }}
+   185→          >
+   186→            Servio AI
+   187→          </motion.span>
+   188→
+   189→          {/* Desktop nav */}
+   190→          <div className="hidden md:flex items-center gap-4">
+   191→            <div className="glass-pill flex items-center gap-6">
+   192→              {navLinks.map((link) => (
+   193→                <a
+   194→                  key={link.label}
+   195→                  href={link.href}
+   196→                  className="text-sm text-[#F5F0E8]/70 hover:text-[#C9A46C] transition-colors duration-300 cursor-pointer"
+   197→                >
+   198→                  {link.label}
+   199→                </a>
+   200→              ))}
+   201→            </div>
+   202→            <motion.button
+   203→              className="bg-[#C9A46C] text-[#0F0F0F] font-semibold px-5 py-2 rounded-full hover:bg-[#d4b07a] transition-colors duration-300"
+   204→              whileHover={{ scale: 1.05 }}
+   205→              whileTap={{ scale: 0.97 }}
+   206→            >
+   207→              ابدأ مجاناً
+   208→            </motion.button>
+   209→          </div>
+   210→
+   211→          {/* Mobile hamburger */}
+   212→          <motion.button
+   213→            className="md:hidden glass rounded-full p-2.5 flex items-center justify-center cursor-pointer"
+   214→            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+   215→            whileTap={{ scale: 0.9 }}
+   216→          >
+   217→            {mobileMenuOpen ? (
+   218→              <X className="w-5 h-5 text-[#F5F0E8]" />
+   219→            ) : (
+   220→              <Menu className="w-5 h-5 text-[#F5F0E8]" />
+   221→            )}
+   222→          </motion.button>
+   223→        </div>
+   224→      </motion.nav>
+   225→
+   226→      {/* Mobile menu */}
+   227→      <AnimatePresence>
+   228→        {mobileMenuOpen && (
+   229→          <motion.div
+   230→            className="fixed inset-0 z-[45] glass-strong flex flex-col items-center justify-center gap-8"
+   231→            initial={{ opacity: 0 }}
+   232→            animate={{ opacity: 1 }}
+   233→            exit={{ opacity: 0 }}
+   234→            transition={{ duration: 0.4 }}
+   235→          >
+   236→            {navLinks.map((link, i) => (
+   237→              <motion.a
+   238→                key={link.label}
+   239→                href={link.href}
+   240→                className="text-2xl font-playfair font-semibold text-[#F5F0E8] hover:text-[#C9A46C] transition-colors duration-300"
+   241→                initial={{ opacity: 0, y: 20 }}
+   242→                animate={{ opacity: 1, y: 0 }}
+   243→                exit={{ opacity: 0, y: 10 }}
+   244→                transition={{ delay: i * 0.1, duration: 0.4 }}
+   245→                onClick={() => setMobileMenuOpen(false)}
+   246→              >
+   247→                {link.label}
+   248→              </motion.a>
+   249→            ))}
+   250→            <motion.button
+   251→              className="bg-[#C9A46C] text-[#0F0F0F] font-semibold px-8 py-3 rounded-full text-lg"
+   252→              initial={{ opacity: 0, y: 20 }}
+   253→              animate={{ opacity: 1, y: 0 }}
+   254→              exit={{ opacity: 0, y: 10 }}
+   255→              transition={{ delay: 0.35, duration: 0.4 }}
+   256→              whileHover={{ scale: 1.05 }}
+   257→              whileTap={{ scale: 0.95 }}
+   258→            >
+   259→              ابدأ مجاناً
+   260→            </motion.button>
+   261→          </motion.div>
+   262→        )}
+   263→      </AnimatePresence>
+   264→    </>
+   265→  );
+   266→}
+   267→
+   268→// ─── 4. HeroSection ───────────────────────────────────────────────────────────
+   269→
+   270→function HeroSection() {
+   271→  const { fetchMenu } = useServioStore();
+   272→
+   273→  useEffect(() => {
+   274→    fetchMenu();
+   275→  }, [fetchMenu]);
+   276→
+   277→  return (
+   278→    <section className="relative z-10 min-h-screen flex items-center justify-center overflow-hidden">
+   279→      {/* Warm glow spots */}
+   280→      <div className="warm-glow w-[400px] h-[400px] bg-[#C9A46C] -top-20 -right-40" />
+   281→      <div
+   282→        className="warm-glow w-[500px] h-[500px] bg-[#7A1C1C] -bottom-32 -left-32"
+   283→        style={{ opacity: 0.1 }}
+   284→      />
+   285→      <div className="warm-glow w-[300px] h-[300px] bg-[#C9A46C] top-1/3 left-1/4" />
+   286→
+   287→      <motion.div
+   288→        className="flex flex-col items-center text-center px-4 max-w-4xl mx-auto"
+   289→        variants={staggerContainer}
+   290→        initial="hidden"
+   291→        animate="visible"
+   292→      >
+   293→        {/* Badge */}
+   294→        <motion.div variants={fadeUp} custom={0.2}>
+   295→          <span className="glass-pill inline-flex items-center gap-2 text-xs tracking-wider uppercase text-[#C9A46C]">
+   296→            <Sparkles className="w-3.5 h-3.5" />
+   297→            مدعوم بالنادل الذكي
+   298→          </span>
+   299→        </motion.div>
+   300→
+   301→        {/* Heading */}
+   302→        <motion.h1
+   303→          className="mt-6 font-playfair text-4xl sm:text-5xl md:text-7xl font-bold leading-tight"
+   304→          variants={staggerContainer}
+   305→        >
+   306→          <motion.span
+   307→            className="block text-[#F5F0E8]"
+   308→            variants={fadeUp}
+   309→            custom={0.35}
+   310→          >
+   311→            منيوك الذكي
+   312→          </motion.span>
+   313→          <motion.span
+   314→            className="block gold-text mt-1"
+   315→            variants={fadeUp}
+   316→            custom={0.5}
+   317→          >
+   318→            اللي يبيع لك
+   319→          </motion.span>
+   320→        </motion.h1>
+   321→
+   322→        {/* Subtext */}
+   323→        <motion.p
+   324→          className="mt-6 text-base sm:text-lg text-[#F5F0E8]/60 max-w-xl mx-auto leading-relaxed"
+   325→          variants={fadeUp}
+   326→          custom={0.65}
+   327→        >
+   328→          ليس مجرد منيو — نظام ذكي يوجّه ويوصي ويزيد إيرادات مطعمك تلقائياً.
+   329→        </motion.p>
+   330→
+   331→        {/* CTA Buttons */}
+   332→        <motion.div
+   333→          className="mt-10 flex flex-col sm:flex-row gap-4 items-center justify-center"
+   334→          variants={fadeUp}
+   335→          custom={0.8}
+   336→        >
+   337→          <motion.button
+   338→            className="bg-[#C9A46C] text-[#0F0F0F] font-semibold px-8 py-3.5 rounded-full flex items-center gap-2 cta-pulse cursor-pointer"
+   339→            whileHover={{ scale: 1.05 }}
+   340→            whileTap={{ scale: 0.97 }}
+   341→            onClick={() => {
+   342→              document.getElementById('القائمة')?.scrollIntoView({ behavior: 'smooth' });
+   343→            }}
+   344→          >
+   345→            جرب القائمة الحية
+   346→            <ArrowLeft className="w-4 h-4" />
+   347→          </motion.button>
+   348→          <motion.button
+   349→            className="glass text-[#F5F0E8] font-medium px-8 py-3.5 rounded-full flex items-center gap-2 hover:border-[#C9A46C]/30 transition-colors duration-300 cursor-pointer"
+   350→            whileHover={{ scale: 1.05 }}
+   351→            whileTap={{ scale: 0.97 }}
+   352→          >
+   353→            <Play className="w-4 h-4" />
+   354→            شاهد العرض
+   355→          </motion.button>
+   356→        </motion.div>
+   357→
+   358→        {/* Social proof */}
+   359→        <motion.div
+   360→          className="mt-12 flex items-center justify-center gap-3"
+   361→          variants={fadeUp}
+   362→          custom={1.0}
+   363→        >
+   364→          <div className="flex -space-x-2">
+   365→            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A46C] to-[#7A1C1C] border-2 border-[#0F0F0F] flex items-center justify-center text-[10px] font-bold text-white">
+   366→              أ
+   367→            </div>
+   368→            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7A1C1C] to-[#C9A46C] border-2 border-[#0F0F0F] flex items-center justify-center text-[10px] font-bold text-white">
+   369→              م
+   370→            </div>
+   371→            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A46C] to-[#3a2a1a] border-2 border-[#0F0F0F] flex items-center justify-center text-[10px] font-bold text-white">
+   372→              ر
+   373→            </div>
+   374→          </div>
+   375→          <span className="text-sm text-[#F5F0E8]/40">
+   376→            موثوق من قبل 2,400+ مطعم
+   377→          </span>
+   378→        </motion.div>
+   379→
+   380→        {/* Scroll hint */}
+   381→        <motion.div
+   382→          className="mt-16 flex flex-col items-center gap-2"
+   383→          initial={{ opacity: 0 }}
+   384→          animate={{ opacity: 1 }}
+   385→          transition={{ delay: 1.5, duration: 0.8 }}
+   386→        >
+   387→          <span className="text-[10px] uppercase tracking-[0.2em] text-[#F5F0E8]/20">
+   388→            اسحب لاكتشاف المزيد
+   389→          </span>
+   390→          <motion.div
+   391→            className="w-5 h-8 rounded-full border border-[#C9A46C]/20 flex items-start justify-center p-1.5"
+   392→            animate={{ opacity: [0.3, 0.7, 0.3] }}
+   393→            transition={{ duration: 2, repeat: Infinity }}
+   394→          >
+   395→            <motion.div
+   396→              className="w-1 h-1.5 rounded-full bg-[#C9A46C]/60"
+   397→              animate={{ y: [0, 10, 0] }}
+   398→              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+   399→            />
+   400→          </motion.div>
+   401→        </motion.div>
+   402→      </motion.div>
+   403→    </section>
+   404→  );
+   405→}
+   406→
+   407→// ─── Badge Component ──────────────────────────────────────────────────────────
+   408→
+   409→function DishBadge({
+   410→  badge,
+   411→  tags,
+   412→  isFeatured,
+   413→  orderCount,
+   414→}: {
+   415→  badge?: 'popular' | 'recommended' | 'new' | undefined;
+   416→  tags?: string[];
+   417→  isFeatured?: boolean;
+   418→  orderCount?: number;
+   419→}) {
+   420→  // Determine which label to show
+   421→  let displayBadge = badge;
+   422→  if (!displayBadge && tags && isFeatured !== undefined && orderCount !== undefined) {
+   423→    displayBadge = getBadge(tags, isFeatured, orderCount);
+   424→  }
+   425→
+   426→  if (!displayBadge) return null;
+   427→
+   428→  const styles: Record<string, string> = {
+   429→    popular: 'bg-[#7A1C1C]/90 text-white',
+   430→    recommended: 'bg-[#C9A46C]/90 text-[#0F0F0F]',
+   431→    new: 'bg-white/10 text-[#F5F0E8]',
+   432→  };
+   433→
+   434→  const labels: Record<string, string> = {
+   435→    popular: '🔥 الأكثر طلباً',
+   436→    recommended: '✨ اختيار الشيف',
+   437→    new: 'جديد',
+   438→  };
+   439→
+   440→  return (
+   441→    <span
+   442→      className={`absolute top-3 left-3 text-[11px] font-medium px-2.5 py-1 rounded-full z-10 ${styles[displayBadge] || styles.new}`}
+   443→    >
+   444→      {labels[displayBadge] || 'جديد'}
+   445→    </span>
+   446→  );
+   447→}
+   448→
+   449→// ─── 5. CategoryTabs ──────────────────────────────────────────────────────────
+   450→
+   451→function CategoryTabs() {
+   452→  const { categories, activeCategory, setActiveCategory } = useServioStore();
+   453→
+   454→  if (categories.length === 0) return null;
+   455→
+   456→  return (
+   457→    <motion.div
+   458→      className="relative z-10 px-6 pt-4 pb-2"
+   459→      initial="hidden"
+   460→      whileInView="visible"
+   461→      viewport={{ once: true, margin: '-40px' }}
+   462→      variants={staggerContainer}
+   463→    >
+   464→      <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 scroll-smooth">
+   465→        {/* "All" pill */}
+   466→        <motion.button
+   467→          className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-medium flex items-center gap-2 transition-colors duration-300 cursor-pointer ${
+   468→            activeCategory === null
+   469→              ? 'bg-[#C9A46C] text-[#0F0F0F]'
+   470→              : 'glass-pill text-[#F5F0E8]/60 hover:text-[#C9A46C]'
+   471→          }`}
+   472→          layout
+   473→          variants={scaleIn}
+   474→          whileHover={{ scale: 1.05 }}
+   475→          whileTap={{ scale: 0.95 }}
+   476→          onClick={() => setActiveCategory(null)}
+   477→        >
+   478→          <Menu className="w-4 h-4" />
+   479→          الكل
+   480→        </motion.button>
+   481→
+   482→        {/* Category pills */}
+   483→        {categories.map((cat) => (
+   484→          <motion.button
+   485→            key={cat.id}
+   486→            className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-medium flex items-center gap-2 transition-colors duration-300 cursor-pointer ${
+   487→              activeCategory === cat.id
+   488→                ? 'bg-[#C9A46C] text-[#0F0F0F]'
+   489→                : 'glass-pill text-[#F5F0E8]/60 hover:text-[#C9A46C]'
+   490→            }`}
+   491→            layout
+   492→            variants={scaleIn}
+   493→            whileHover={{ scale: 1.05 }}
+   494→            whileTap={{ scale: 0.95 }}
+   495→            onClick={() => setActiveCategory(cat.id)}
+   496→          >
+   497→            {cat.icon && <span>{cat.icon}</span>}
+   498→            {cat.name}
+   499→          </motion.button>
+   500→        ))}
+   501→      </div>
+   502→    </motion.div>
+   503→  );
+   504→}
+   505→
+   506→// ─── 6. MenuPreview ───────────────────────────────────────────────────────────
+   507→
+   508→function MenuPreview() {
+   509→  const {
+   510→    categories,
+   511→    activeCategory,
+   512→    activeDish,
+   513→    setActiveDish,
+   514→    addToCart,
+   515→    setVoiceOpen,
+   516→    menuLoading,
+   517→    menuLoaded,
+   518→  } = useServioStore();
+   519→
+   520→  const allDishes = categories.flatMap((c) => c.dishes);
+   521→  const filteredDishes = activeCategory
+   522→    ? categories.find((c) => c.id === activeCategory)?.dishes || []
+   523→    : allDishes;
+   524→
+   525→  return (
+   526→    <section id="القائمة" className="py-20 relative z-10">
+   527→      {/* Section header */}
+   528→      <motion.div
+   529→        className="text-center px-4 mb-12"
+   530→        initial="hidden"
+   531→        whileInView="visible"
+   532→        viewport={{ once: true, margin: '-60px' }}
+   533→        variants={staggerContainer}
+   534→      >
+   535→        <motion.span
+   536→          className="glass-pill inline-flex items-center gap-2 text-xs tracking-wider uppercase text-[#C9A46C] mb-4"
+   537→          variants={fadeUp}
+   538→          custom={0}
+   539→        >
+   540→          <Flame className="w-3.5 h-3.5" />
+   541→          معاينة مباشرة
+   542→        </motion.span>
+   543→        <motion.h2
+   544→          className="font-playfair text-3xl sm:text-4xl font-bold text-[#F5F0E8] mt-3"
+   545→          variants={fadeUp}
+   546→          custom={0.1}
+   547→        >
+   548→          تجربة منسّقة بالذكاء الاصطناعي
+   549→        </motion.h2>
+   550→        <motion.p
+   551→          className="text-base text-[#F5F0E8]/50 mt-3 max-w-lg mx-auto"
+   552→          variants={fadeUp}
+   553→          custom={0.2}
+   554→        >
+   555→          كل طبق محسّن بالذكاء الاصطناعي لزيادة الجاذبية وقيمة الطلب
+   556→        </motion.p>
+   557→      </motion.div>
+   558→
+   559→      {/* Loading skeletons */}
+   560→      {menuLoading && (
+   561→        <div className="flex gap-5 overflow-x-auto no-scrollbar px-6 pb-4">
+   562→          {Array.from({ length: 3 }).map((_, i) => (
+   563→            <motion.div
+   564→              key={`skeleton-${i}`}
+   565→              className="relative flex-shrink-0 min-w-[280px] sm:min-w-[320px]"
+   566→              initial={{ opacity: 0 }}
+   567→              animate={{ opacity: 1 }}
+   568→              transition={{ delay: i * 0.15 }}
+   569→            >
+   570→              <div className="glass rounded-2xl overflow-hidden">
+   571→                <div className="h-48 w-full bg-white/5 animate-pulse" />
+   572→                <div className="p-5 space-y-3">
+   573→                  <div className="h-5 w-3/4 bg-white/5 rounded animate-pulse" />
+   574→                  <div className="h-4 w-full bg-white/5 rounded animate-pulse" />
+   575→                  <div className="h-4 w-2/3 bg-white/5 rounded animate-pulse" />
+   576→                  <div className="flex items-center justify-between mt-4">
+   577→                    <div className="h-6 w-16 bg-white/5 rounded animate-pulse" />
+   578→                    <div className="h-8 w-24 bg-white/5 rounded-full animate-pulse" />
+   579→                  </div>
+   580→                </div>
+   581→              </div>
+   582→            </motion.div>
+   583→          ))}
+   584→        </div>
+   585→      )}
+   586→
+   587→      {/* Dish cards */}
+   588→      {!menuLoading && filteredDishes.length > 0 && (
+   589→        <div className="flex gap-5 overflow-x-auto no-scrollbar px-6 pb-4 scroll-smooth snap-x snap-mandatory">
+   590→          <AnimatePresence mode="popLayout">
+   591→            {filteredDishes.map((dish, i) => {
+   592→              const badge = getBadge(dish.tags, dish.isFeatured, dish.orderCount);
+   593→              const isExpanded = activeDish?.id === dish.id;
+   594→
+   595→
+   596→
+   597→              return (
+   598→                <motion.div
+   599→                  key={dish.id}
+   600→                  className="relative flex-shrink-0 min-w-[280px] sm:min-w-[320px]"
+   601→                  initial="hidden"
+   602→                  whileInView="visible"
+   603→                  viewport={{ once: true, margin: '-40px' }}
+   604→                  custom={i * 0.08}
+   605→                  variants={scaleIn}
+   606→                  layout
+   607→                >
+   608→                  <motion.div
+   609→                    className="glass rounded-2xl overflow-hidden card-glow cursor-pointer group snap-center"
+   610→                    whileHover={{ scale: 1.03, y: -4 }}
+   611→                    transition={{ duration: 0.35, ease: 'easeOut' }}
+   612→                    onClick={() => setActiveDish(dish)}
+   613→                  >
+   614→                    {/* Image */}
+   615→                    <div className="h-48 w-full overflow-hidden relative">
+   616→                      <motion.img
+   617→                        src={dish.image}
+   618→                        alt={dish.name}
+   619→                        className="w-full h-full object-cover"
+   620→                        whileHover={{ scale: 1.1 }}
+   621→                        transition={{ duration: 0.7 }}
+   622→                        loading="lazy"
+   623→                      />
+   624→                      <DishBadge badge={badge} />
+   625→                    </div>
+   626→
+   627→                    {/* Content */}
+   628→                    <div className="p-5">
+   629→                      <h3 className="font-playfair text-lg font-semibold text-[#F5F0E8]">
+   630→                        {dish.name}
+   631→                      </h3>
+   632→                      <p className="text-sm text-[#F5F0E8]/50 line-clamp-2 mt-1 leading-relaxed">
+   633→                        {dish.description}
+   634→                      </p>
+   635→
+   636→                      {/* Rating + Order count */}
+   637→                      <div className="flex items-center gap-3 mt-2">
+   638→                        <span className="flex items-center gap-1 text-[#C9A46C] text-xs">
+   639→                          <Star className="w-3 h-3 fill-[#C9A46C]" />
+   640→                          {dish.rating}
+   641→                        </span>
+   642→                        {dish.orderCount > 0 && (
+   643→                          <span className="text-[10px] text-[#F5F0E8]/25">
+   644→                            طُلب {dish.orderCount} مرة
+   645→                          </span>
+   646→                        )}
+   647→                      </div>
+   648→
+   649→                      <div className="flex items-center justify-between mt-3">
+   650→                        <span className="text-[#C9A46C] font-bold text-xl font-playfair">
+   651→                          {dish.price} ر.س
+   652→                        </span>
+   653→                        <motion.button
+   654→                          className="glass-pill text-xs flex items-center gap-1.5 text-[#C9A46C] cursor-pointer"
+   655→                          whileHover={{ scale: 1.05 }}
+   656→                          whileTap={{ scale: 0.95 }}
+   657→                          onClick={(e) => {
+   658→                            e.stopPropagation();
+   659→                            setActiveDish(dish);
+   660→                            setVoiceOpen(true);
+   661→                          }}
+   662→                        >
+   663→                          <Mic className="w-3 h-3" />
+   664→                          تحدث مع الذكاء
+   665→                        </motion.button>
+   666→                      </div>
+   667→                    </div>
+   668→                  </motion.div>
+   669→
+   670→                  {/* Expanded action area */}
+   671→                  <AnimatePresence>
+   672→                    {isExpanded && (
+   673→                      <motion.div
+   674→                        className="mt-3 flex flex-col gap-2"
+   675→                        initial={{ opacity: 0, height: 0 }}
+   676→                        animate={{ opacity: 1, height: 'auto' }}
+   677→                        exit={{ opacity: 0, height: 0 }}
+   678→                        transition={{ duration: 0.35, ease: 'easeOut' }}
+   679→                      >
+   680→                        <motion.button
+   681→                          className="w-full bg-[#C9A46C] text-[#0F0F0F] font-semibold py-3 rounded-xl text-sm cursor-pointer"
+   682→                          initial={{ opacity: 0, x: 10 }}
+   683→                          animate={{ opacity: 1, x: 0 }}
+   684→                          transition={{ delay: 0.05 }}
+   685→                          whileTap={{ scale: 0.97 }}
+   686→                          onClick={() => addToCart(dish)}
+   687→                        >
+   688→                          أضف للطلب — {dish.price} ر.س
+   689→                        </motion.button>
+   690→                        <div className="flex gap-2">
+   691→                          <motion.button
+   692→                            className="flex-1 glass text-[#F5F0E8] py-2.5 rounded-xl text-sm cursor-pointer"
+   693→                            initial={{ opacity: 0, x: 10 }}
+   694→                            animate={{ opacity: 1, x: 0 }}
+   695→                            transition={{ delay: 0.1 }}
+   696→                            whileTap={{ scale: 0.97 }}
+   697→                            onClick={() => setActiveDish(dish)}
+   698→                          >
+   699→                            عرض بدائل
+   700→                          </motion.button>
+   701→                          <motion.button
+   702→                            className="flex-1 glass text-[#F5F0E8] py-2.5 rounded-xl text-sm cursor-pointer"
+   703→                            initial={{ opacity: 0, x: 10 }}
+   704→                            animate={{ opacity: 1, x: 0 }}
+   705→                            transition={{ delay: 0.15 }}
+   706→                            whileTap={{ scale: 0.97 }}
+   707→                            onClick={() => addToCart(dish)}
+   708→                          >
+   709→                            ترقية لكمبو
+   710→                          </motion.button>
+   711→                        </div>
+   712→                      </motion.div>
+   713→                    )}
+   714→                  </AnimatePresence>
+   715→                </motion.div>
+   716→              );
+   717→            })}
+   718→          </AnimatePresence>
+   719→        </div>
+   720→      )}
+   721→
+   722→      {/* Loaded but no dishes */}
+   723→      {!menuLoading && menuLoaded && filteredDishes.length === 0 && (
+   724→        <motion.div
+   725→          className="text-center py-16 px-6"
+   726→          initial={{ opacity: 0 }}
+   727→          animate={{ opacity: 1 }}
+   728→        >
+   729→          <p className="text-[#F5F0E8]/30 text-sm">لا توجد أصناف في هذه الفئة حالياً</p>
+   730→        </motion.div>
+   731→      )}
+   732→
+   733→      {/* Scroll indicator */}
+   734→      {filteredDishes.length > 0 && (
+   735→        <div className="flex justify-center mt-6 md:hidden">
+   736→          <div className="flex items-center gap-2 text-[#F5F0E8]/20 text-xs">
+   737→            <ChevronRight className="w-4 h-4 rotate-90" />
+   738→            اسحب للتصفح
+   739→            <ChevronRight className="w-4 h-4 -rotate-90" />
+   740→          </div>
+   741→        </div>
+   742→      )}
+   743→    </section>
+   744→  );
+   745→}
+   746→
+   747→// ─── 7. VoiceAIOverlay ────────────────────────────────────────────────────────
+   748→
+   749→function VoiceAIOverlay() {
+   750→  const { voiceOpen, setVoiceOpen, aiState, activeDish, addToCart } =
+   751→    useServioStore();
+   752→
+   753→  const getStatusText = (): string => {
+   754→    switch (aiState) {
+   755→      case 'listening':
+   756→        return 'يستمع...';
+   757→      case 'thinking':
+   758→        return 'يفكّر...';
+   759→      case 'speaking':
+   760→        return 'يتحدث...';
+   761→      default:
+   762→        return '';
+   763→    }
+   764→  };
+   765→
+   766→  const getStatusIcon = () => {
+   767→    switch (aiState) {
+   768→      case 'listening':
+   769→        return <Mic className="w-5 h-5 text-[#C9A46C]" />;
+   770→      case 'thinking':
+   771→        return (
+   772→          <div className="flex gap-1">
+   773→            {[0, 1, 2].map((i) => (
+   774→              <motion.div
+   775→                key={i}
+   776→                className="w-2 h-2 rounded-full bg-[#C9A46C]"
+   777→                animate={{ opacity: [0.3, 1, 0.3] }}
+   778→                transition={{
+   779→                  duration: 1,
+   780→                  repeat: Infinity,
+   781→                  delay: i * 0.2,
+   782→                }}
+   783→              />
+   784→            ))}
+   785→          </div>
+   786→        );
+   787→      case 'speaking':
+   788→        return <Volume2 className="w-5 h-5 text-[#C9A46C]" />;
+   789→      default:
+   790→        return null;
+   791→    }
+   792→  };
+   793→
+   794→  return (
+   795→    <AnimatePresence>
+   796→      {voiceOpen && (
+   797→        <motion.div
+   798→          className="fixed inset-0 z-[60] glass-strong flex flex-col items-center justify-center"
+   799→          initial={{ opacity: 0 }}
+   800→          animate={{ opacity: 1 }}
+   801→          exit={{ opacity: 0 }}
+   802→          transition={{ duration: 0.4 }}
+   803→        >
+   804→          {/* Close button */}
+   805→          <motion.button
+   806→            className="absolute top-6 left-6 glass rounded-full p-3 flex items-center justify-center cursor-pointer"
+   807→            initial={{ opacity: 0, scale: 0.8 }}
+   808→            animate={{ opacity: 1, scale: 1 }}
+   809→            transition={{ delay: 0.3 }}
+   810→            whileTap={{ scale: 0.9 }}
+   811→            onClick={() => setVoiceOpen(false)}
+   812→          >
+   813→            <X className="w-5 h-5 text-[#F5F0E8]" />
+   814→          </motion.button>
+   815→
+   816→          {/* AI Avatar */}
+   817→          <motion.div
+   818→            className="w-24 h-24 rounded-full bg-gradient-to-br from-[#C9A46C] to-[#7A1C1C] flex items-center justify-center avatar-pulse"
+   819→            initial={{ scale: 0.5, opacity: 0 }}
+   820→            animate={{ scale: 1, opacity: 1 }}
+   821→            transition={{
+   822→              type: 'spring',
+   823→              damping: 20,
+   824→              stiffness: 200,
+   825→              delay: 0.1,
+   826→            }}
+   827→          >
+   828→            <Bot className="w-10 h-10 text-white" />
+   829→          </motion.div>
+   830→
+   831→          {/* Status */}
+   832→          <motion.div
+   833→            className="mt-6 flex items-center gap-2 text-lg font-medium text-[#F5F0E8]"
+   834→            initial={{ opacity: 0, y: 10 }}
+   835→            animate={{ opacity: 1, y: 0 }}
+   836→            transition={{ delay: 0.3 }}
+   837→          >
+   838→            {getStatusIcon()}
+   839→            <span>{getStatusText()}</span>
+   840→          </motion.div>
+   841→
+   842→          {/* Voice waveform */}
+   843→          <div className="mt-8 flex items-center justify-center gap-1 h-10">
+   844→            {Array.from({ length: 12 }).map((_, i) => (
+   845→              <motion.div
+   846→                key={i}
+   847→                className="voice-bar rounded-full"
+   848→                style={{
+   849→                  animationDelay: `${i * 0.08}s`,
+   850→                  height:
+   851→                    aiState === 'speaking' || aiState === 'listening'
+   852→                      ? undefined
+   853→                      : '6px',
+   854→                  animationPlayState:
+   855→                    aiState === 'speaking' || aiState === 'listening'
+   856→                      ? 'running'
+   857→                      : 'paused',
+   858→                  opacity:
+   859→                    aiState === 'idle' || aiState === 'thinking' ? 0.3 : 1,
+   860→                }}
+   861→                animate={
+   862→                  aiState === 'thinking'
+   863→                    ? {
+   864→                        height: [6, 6, 6],
+   865→                      }
+   866→                    : undefined
+   867→                }
+   868→              />
+   869→            ))}
+   870→          </div>
+   871→
+   872→          {/* AI Response */}
+   873→          <AnimatePresence>
+   874→            {aiState === 'speaking' && (
+   875→              <motion.div
+   876→                className="mt-10 max-w-md text-center px-6"
+   877→                initial={{ opacity: 0, y: 20 }}
+   878→                animate={{ opacity: 1, y: 0 }}
+   879→                exit={{ opacity: 0, y: -10 }}
+   880→                transition={{ duration: 0.5, delay: 0.2 }}
+   881→              >
+   882→                <div className="glass rounded-2xl p-6">
+   883→                  <p className="text-[#F5F0E8]/80 text-sm leading-relaxed">
+   884→                    {activeDish
+   885→                      ? `هذا ${activeDish.name} غني ومريح، بتوازن مثالي للنكهات. أنصحك بإضافة خبز طازج جانبي لتجربة كاملة.`
+   886→                      : 'كيف أقدر أساعدك اليوم؟ اسألني عن أي طبق أو دعني أرشح لك شي مميز.'}
+   887→                  </p>
+   888→                </div>
+   889→              </motion.div>
+   890→            )}
+   891→          </AnimatePresence>
+   892→
+   893→          {/* Suggestion buttons */}
+   894→          <AnimatePresence>
+   895→            {aiState === 'speaking' && (
+   896→              <motion.div
+   897→                className="mt-8 flex flex-col sm:flex-row gap-3 px-6"
+   898→                initial={{ opacity: 0, y: 20 }}
+   899→                animate={{ opacity: 1, y: 0 }}
+   900→                exit={{ opacity: 0, y: 10 }}
+   901→                transition={{ duration: 0.4, delay: 0.6 }}
+   902→              >
+   903→                {activeDish ? (
+   904→                  <>
+   905→                    <motion.button
+   906→                      className="bg-[#C9A46C] text-[#0F0F0F] rounded-full px-6 py-3 font-medium text-sm flex items-center gap-2 cursor-pointer"
+   907→                      initial={{ opacity: 0, y: 10 }}
+   908→                      animate={{ opacity: 1, y: 0 }}
+   909→                      transition={{ delay: 0.05 }}
+   910→                      whileHover={{ scale: 1.05 }}
+   911→                      whileTap={{ scale: 0.97 }}
+   912→                      onClick={() => {
+   913→                        addToCart(activeDish);
+   914→                        setVoiceOpen(false);
+   915→                      }}
+   916→                    >
+   917→                      <Plus className="w-4 h-4" />
+   918→                      أضف للطلب
+   919→                    </motion.button>
+   920→                    <motion.button
+   921→                      className="glass rounded-full px-6 py-3 text-[#F5F0E8] text-sm cursor-pointer"
+   922→                      initial={{ opacity: 0, y: 10 }}
+   923→                      animate={{ opacity: 1, y: 0 }}
+   924→                      transition={{ delay: 0.1 }}
+   925→                      whileHover={{ scale: 1.05 }}
+   926→                      whileTap={{ scale: 0.97 }}
+   927→                    >
+   928→                      عرض بدائل
+   929→                    </motion.button>
+   930→                    <motion.button
+   931→                      className="glass rounded-full px-6 py-3 text-[#F5F0E8] text-sm cursor-pointer"
+   932→                      initial={{ opacity: 0, y: 10 }}
+   933→                      animate={{ opacity: 1, y: 0 }}
+   934→                      transition={{ delay: 0.15 }}
+   935→                      whileHover={{ scale: 1.05 }}
+   936→                      whileTap={{ scale: 0.97 }}
+   937→                    >
+   938→                      ترقية لكمبو
+   939→                    </motion.button>
+   940→                  </>
+   941→                ) : (
+   942→                  <motion.button
+   943→                    className="bg-[#C9A46C] text-[#0F0F0F] rounded-full px-6 py-3 font-medium text-sm flex items-center gap-2 cursor-pointer"
+   944→                    initial={{ opacity: 0, y: 10 }}
+   945→                    animate={{ opacity: 1, y: 0 }}
+   946→                    transition={{ delay: 0.05 }}
+   947→                    whileHover={{ scale: 1.05 }}
+   948→                    whileTap={{ scale: 0.97 }}
+   949→                  >
+   950→                    <Sparkles className="w-4 h-4" />
+   951→                    رشّح لي شي
+   952→                  </motion.button>
+   953→                )}
+   954→              </motion.div>
+   955→            )}
+   956→          </AnimatePresence>
+   957→        </motion.div>
+   958→      )}
+   959→    </AnimatePresence>
+   960→  );
+   961→}
+   962→
+   963→// ─── 8. SmartCart ─────────────────────────────────────────────────────────────
+   964→
+   965→function SmartCart() {
+   966→  const {
+   967→    cartItems,
+   968→    cartOpen,
+   969→    setCartOpen,
+   970→    updateQuantity,
+   971→    removeFromCart,
+   972→    cartTotal,
+   973→    cartCount,
+   974→    addToCart,
+   975→    categories,
+   976→    placeOrder,
+   977→    orderPlacing,
+   978→  } = useServioStore();
+   979→
+   980→  const total = cartTotal();
+   981→  const count = cartCount();
+   982→
+   983→  // Find first drink from مشروبات ساخنة for upsell
+   984→  const drinkCategory = categories.find(
+   985→    (c) => c.name === 'مشروبات ساخنة'
+   986→  );
+   987→  const firstDrink = drinkCategory?.dishes[0] || null;
+   988→
+   989→  return (
+   990→    <AnimatePresence>
+   991→      {cartOpen && (
+   992→        <motion.div
+   993→          className="fixed bottom-0 left-0 right-0 z-50 max-h-[70vh] glass-strong rounded-t-3xl flex flex-col"
+   994→          variants={slideUp}
+   995→          initial="hidden"
+   996→          animate="visible"
+   997→          exit="exit"
+   998→        >
+   999→          {/* Drag handle */}
+  1000→          <div className="flex justify-center pt-3 pb-1">
+  1001→            <div className="w-10 h-1 bg-[#C9A46C]/30 rounded-full" />
+  1002→          </div>
+  1003→
+  1004→          {/* Header */}
+  1005→          <div className="px-6 py-4 flex items-center justify-between">
+  1006→            <h3 className="font-playfair text-xl font-bold text-[#F5F0E8]">
+  1007→              طلبك
+  1008→              {count > 0 && (
+  1009→                <span className="text-sm font-normal text-[#F5F0E8]/40 mr-2">
+  1010→                  {count} أصناف
+  1011→                </span>
+  1012→              )}
+  1013→            </h3>
+  1014→            <motion.button
+  1015→              className="p-1 cursor-pointer"
+  1016→              whileTap={{ scale: 0.9 }}
+  1017→              onClick={() => setCartOpen(false)}
+  1018→            >
+  1019→              <X className="w-5 h-5 text-[#F5F0E8]/50" />
+  1020→            </motion.button>
+  1021→          </div>
+  1022→
+  1023→          {cartItems.length === 0 ? (
+  1024→            /* Empty state */
+  1025→            <motion.div
+  1026→              className="flex-1 flex flex-col items-center justify-center py-12 px-6"
+  1027→              initial={{ opacity: 0, scale: 0.9 }}
+  1028→              animate={{ opacity: 1, scale: 1 }}
+  1029→              transition={{ delay: 0.2 }}
+  1030→            >
+  1031→              <div className="w-16 h-16 rounded-full glass flex items-center justify-center mb-4">
+  1032→                <ShoppingCart className="w-7 h-7 text-[#F5F0E8]/20" />
+  1033→              </div>
+  1034→              <p className="text-[#F5F0E8]/30 text-sm">
+  1035→                سلتك فارغة
+  1036→              </p>
+  1037→              <p className="text-[#F5F0E8]/15 text-xs mt-1">
+  1038→                أضف أصناف من القائمة للبدء
+  1039→              </p>
+  1040→            </motion.div>
+  1041→          ) : (
+  1042→            <>
+  1043→              {/* Items list */}
+  1044→              <div className="flex-1 overflow-y-auto px-6 space-y-4 max-h-[40vh] no-scrollbar">
+  1045→                <AnimatePresence mode="popLayout">
+  1046→                  {cartItems.map(({ item, quantity }) => (
+  1047→                    <motion.div
+  1048→                      key={item.id}
+  1049→                      className="flex gap-4 items-center"
+  1050→                      layout
+  1051→                      initial={{ opacity: 0, x: 20 }}
+  1052→                      animate={{ opacity: 1, x: 0 }}
+  1053→                      exit={{ opacity: 0, x: -20, height: 0, marginBottom: 0 }}
+  1054→                      transition={{ duration: 0.3 }}
+  1055→                    >
+  1056→                      <img
+  1057→                        src={item.image}
+  1058→                        alt={item.name}
+  1059→                        className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
+  1060→                      />
+  1061→                      <div className="flex-1 min-w-0">
+  1062→                        <p className="font-medium text-sm text-[#F5F0E8] truncate">
+  1063→                          {item.name}
+  1064→                        </p>
+  1065→                        <p className="text-[#C9A46C] text-sm font-semibold">
+  1066→                          {item.price * quantity} ر.س
+  1067→                        </p>
+  1068→                      </div>
+  1069→                      <div className="flex items-center gap-2">
+  1070→                        <motion.button
+  1071→                          className="glass rounded-full w-7 h-7 flex items-center justify-center cursor-pointer"
+  1072→                          whileTap={{ scale: 0.85 }}
+  1073→                          onClick={() =>
+  1074→                            updateQuantity(item.id, quantity - 1)
+  1075→                          }
+  1076→                        >
+  1077→                          <Minus className="w-3.5 h-3.5 text-[#F5F0E8]/70" />
+  1078→                        </motion.button>
+  1079→                        <span className="text-sm font-medium text-[#F5F0E8] w-5 text-center">
+  1080→                          {quantity}
+  1081→                        </span>
+  1082→                        <motion.button
+  1083→                          className="glass rounded-full w-7 h-7 flex items-center justify-center cursor-pointer"
+  1084→                          whileTap={{ scale: 0.85 }}
+  1085→                          onClick={() =>
+  1086→                            updateQuantity(item.id, quantity + 1)
+  1087→                          }
+  1088→                        >
+  1089→                          <Plus className="w-3.5 h-3.5 text-[#F5F0E8]/70" />
+  1090→                        </motion.button>
+  1091→                        <motion.button
+  1092→                          className="mr-1 cursor-pointer"
+  1093→                          whileTap={{ scale: 0.85 }}
+  1094→                          onClick={() => removeFromCart(item.id)}
+  1095→                        >
+  1096→                          <Trash2 className="w-3.5 h-3.5 text-[#F5F0E8]/30 hover:text-red-400 transition-colors" />
+  1097→                        </motion.button>
+  1098→                      </div>
+  1099→                    </motion.div>
+  1100→                  ))}
+  1101→                </AnimatePresence>
+  1102→              </div>
+  1103→
+  1104→              {/* AI upsell suggestion */}
+  1105→              {total < 50 && firstDrink && (
+  1106→                <motion.div
+  1107→                  className="mx-6 mt-4 p-4 glass rounded-2xl"
+  1108→                  initial={{ opacity: 0, y: 10 }}
+  1109→                  animate={{ opacity: 1, y: 0 }}
+  1110→                  transition={{ delay: 0.3 }}
+  1111→                >
+  1112→                  <div className="flex items-center justify-between">
+  1113→                    <div className="flex items-center gap-2">
+  1114→                      <Bot className="w-4 h-4 text-[#C9A46C]" />
+  1115→                      <span className="text-sm text-[#F5F0E8]/50">
+  1116→                        معظم الزبائن يضيفون مشروب مع هذا 🍷
+  1117→                      </span>
+  1118→                    </div>
+  1119→                    <motion.button
+  1120→                      className="text-[#C9A46C] text-sm font-medium cursor-pointer"
+  1121→                      whileHover={{ scale: 1.05 }}
+  1122→                      whileTap={{ scale: 0.95 }}
+  1123→                      onClick={() => addToCart(firstDrink)}
+  1124→                    >
+  1125→                      أضف مشروب
+  1126→                    </motion.button>
+  1127→                  </div>
+  1128→                </motion.div>
+  1129→              )}
+  1130→
+  1131→              {/* Footer */}
+  1132→              <div className="px-6 py-4 border-t border-white/5 mt-auto">
+  1133→                <div className="flex justify-between items-center">
+  1134→                  <span className="text-sm text-[#F5F0E8]/50">
+  1135→                    المجموع
+  1136→                  </span>
+  1137→                  <span className="font-playfair text-2xl font-bold gold-text">
+  1138→                    {total} ر.س
+  1139→                  </span>
+  1140→                </div>
+  1141→                <motion.button
+  1142→                  className="w-full bg-[#C9A46C] text-[#0F0F0F] font-semibold py-3.5 rounded-full mt-3 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+  1143→                  whileHover={{ scale: 1.02 }}
+  1144→                  whileTap={{ scale: 0.98 }}
+  1145→                  disabled={orderPlacing}
+  1146→                  onClick={() => placeOrder()}
+  1147→                >
+  1148→                  {orderPlacing ? (
+  1149→                    <motion.div
+  1150→                      className="w-5 h-5 border-2 border-[#0F0F0F]/30 border-t-[#0F0F0F] rounded-full"
+  1151→                      animate={{ rotate: 360 }}
+  1152→                      transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+  1153→                    />
+  1154→                  ) : (
+  1155→                    <>
+  1156→                      تأكيد الطلب — {total} ر.س
+  1157→                      <ArrowLeft className="w-4 h-4" />
+  1158→                    </>
+  1159→                  )}
+  1160→                </motion.button>
+  1161→              </div>
+  1162→            </>
+  1163→          )}
+  1164→        </motion.div>
+  1165→      )}
+  1166→    </AnimatePresence>
+  1167→  );
+  1168→}
+  1169→
+  1170→// ─── 9. CartFAB ───────────────────────────────────────────────────────────────
+  1171→
+  1172→function CartFAB() {
+  1173→  const { cartOpen, setCartOpen, cartTotal, cartCount } = useServioStore();
+  1174→  const count = cartCount();
+  1175→
+  1176→  if (cartOpen || count === 0) return null;
+  1177→
+  1178→  return (
+  1179→    <motion.button
+  1180→      className="fixed bottom-6 left-6 z-40 glass-strong rounded-full p-4 flex items-center gap-3 cta-pulse cursor-pointer"
+  1181→      initial={{ scale: 0, opacity: 0 }}
+  1182→      animate={{ scale: 1, opacity: 1 }}
+  1183→      exit={{ scale: 0, opacity: 0 }}
+  1184→      transition={{ type: 'spring', damping: 20, stiffness: 300, delay: 0.1 }}
+  1185→      whileHover={{ scale: 1.08 }}
+  1186→      whileTap={{ scale: 0.95 }}
+  1187→      onClick={() => setCartOpen(true)}
+  1188→    >
+  1189→      <ShoppingCart className="w-5 h-5 text-[#C9A46C]" />
+  1190→      <span className="gold-text font-bold text-sm">
+  1191→        {cartTotal()} ر.س
+  1192→      </span>
+  1193→      {count > 0 && (
+  1194→        <motion.span
+  1195→          className="absolute -top-1 -left-1 bg-[#7A1C1C] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold"
+  1196→          initial={{ scale: 0 }}
+  1197→          animate={{ scale: 1 }}
+  1198→          transition={{ type: 'spring', damping: 15, stiffness: 300 }}
+  1199→        >
+  1200→          {count}
+  1201→        </motion.span>
+  1202→      )}
+  1203→    </motion.button>
+  1204→  );
+  1205→}
+  1206→
+  1207→// ─── 10. OrderSuccessToast ────────────────────────────────────────────────────
+  1208→
+  1209→function OrderSuccessToast() {
+  1210→  const { orderSuccess, resetOrder } = useServioStore();
+  1211→
+  1212→  return (
+  1213→    <AnimatePresence>
+  1214→      {orderSuccess && (
+  1215→        <motion.div
+  1216→          className="fixed top-6 left-1/2 -translate-x-1/2 z-[70] glass-strong rounded-2xl px-6 py-4 flex items-center gap-3 shadow-lg"
+  1217→          initial={{ opacity: 0, y: -30, scale: 0.9 }}
+  1218→          animate={{ opacity: 1, y: 0, scale: 1 }}
+  1219→          exit={{ opacity: 0, y: -20, scale: 0.95 }}
+  1220→          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+  1221→        >
+  1222→          <motion.div
+  1223→            initial={{ scale: 0 }}
+  1224→            animate={{ scale: 1 }}
+  1225→            transition={{ type: 'spring', damping: 15, stiffness: 300, delay: 0.15 }}
+  1226→          >
+  1227→            <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+  1228→          </motion.div>
+  1229→          <span className="text-[#F5F0E8] font-medium text-sm">
+  1230→            تم تأكيد طلبك بنجاح! ✅
+  1231→          </span>
+  1232→          <motion.button
+  1233→            className="mr-2 cursor-pointer"
+  1234→            whileTap={{ scale: 0.9 }}
+  1235→            onClick={resetOrder}
+  1236→          >
+  1237→            <X className="w-4 h-4 text-[#F5F0E8]/40 hover:text-[#F5F0E8] transition-colors" />
+  1238→          </motion.button>
+  1239→        </motion.div>
+  1240→      )}
+  1241→    </AnimatePresence>
+  1242→  );
+  1243→}
+  1244→
+  1245→// ─── 11. Main Export ──────────────────────────────────────────────────────────
+  1246→
+  1247→export default function ServioLanding() {
+  1248→  const { fetchMenu } = useServioStore();
+  1249→
+  1250→  useEffect(() => {
+  1251→    fetchMenu();
+  1252→  }, [fetchMenu]);
+  1253→
+  1254→  return (
+  1255→    <div
+  1256→      className="relative min-h-screen grain-overlay vignette"
+  1257→      style={{ background: '#0F0F0F' }}
+  1258→    >
+  1259→      <BackgroundLayer />
+  1260→      <Particles />
+  1261→      <Navigation />
+  1262→
+  1263→      <main className="relative z-10">
+  1264→        <HeroSection />
+  1265→        <CategoryTabs />
+  1266→        <MenuPreview />
+  1267→        <HowItWorks />
+  1268→        <AIVoiceDemo />
+  1269→        <SmartMenuExperience />
+  1270→        <AIDashboard />
+  1271→        <Results />
+  1272→        <Pricing />
+  1273→        <AIPersonalization />
+  1274→        <Integration />
+  1275→        <FinalCTA />
+  1276→      </main>
+  1277→
+  1278→      <VoiceAIOverlay />
+  1279→      <SmartCart />
+  1280→      <CartFAB />
+  1281→      <OrderSuccessToast />
+  1282→      <Footer />
+  1283→    </div>
+  1284→  );
+  1285→}
