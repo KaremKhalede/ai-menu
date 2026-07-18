@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { AnimatePresence, motion } from 'framer-motion';
 import Landing from '@/components/landing';
+import Login from '@/components/login';
+import Onboarding from '@/components/onboarding';
+import AdminSettings from '@/components/admin-settings';
 import SmartMenu from '@/components/smart-menu';
 import DishDetail from '@/components/dish-detail';
 import AIChat from '@/components/ai-chat';
@@ -77,6 +80,9 @@ export default function Home() {
             transition={{ duration: 0.3 }}
           >
             {view === 'landing' && <Landing />}
+            {view === 'login' && <Login />}
+            {view === 'onboarding' && <Onboarding />}
+            {view === 'settings' && <AdminSettings />}
             {view === 'menu' && (
               <SmartMenu
                 onCartOpen={() => setCartOpen(true)}

@@ -6,12 +6,23 @@ import type {
   ChatMessage,
   Dish,
   Addon,
+  User,
+  Restaurant,
 } from './types';
 
 interface MenuAIState {
   // Navigation
   view: ViewType;
   setView: (view: ViewType) => void;
+
+  // Auth
+  user: User | null;
+  setUser: (user: User | null) => void;
+  isAuthenticated: boolean;
+
+  // Restaurant
+  restaurant: Restaurant;
+  setRestaurant: (r: Restaurant) => void;
 
   // Menu
   categories: Category[];
@@ -49,6 +60,21 @@ export const useStore = create<MenuAIState>((set, get) => ({
   // Navigation
   view: 'landing',
   setView: (view) => set({ view }),
+
+  // Auth
+  user: null,
+  setUser: (user) => set({ user, isAuthenticated: !!user }),
+  isAuthenticated: false,
+
+  // Restaurant
+  restaurant: {
+    name: '',
+    description: '',
+    type: '',
+    theme: 'luxury',
+    currency: 'ر.س',
+  },
+  setRestaurant: (r) => set({ restaurant: r }),
 
   // Menu
   categories: [],

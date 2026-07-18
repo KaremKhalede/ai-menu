@@ -5,11 +5,13 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 جاري زراعة البيانات...');
 
-  // Clear existing data
+  // Clear existing data (order matters due to relations)
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
   await prisma.dish.deleteMany();
   await prisma.category.deleteMany();
+  await prisma.session.deleteMany();
+  await prisma.user.deleteMany();
   await prisma.restaurant.deleteMany();
   await prisma.analyticsEvent.deleteMany();
 
@@ -321,6 +323,30 @@ async function main() {
 
   const totalDishes = dishesData.length;
   const featuredDishes = dishesData.filter(d => d.isFeatured).length;
+
+  // Create demo user
+  const demoUser = await prisma.user.create({
+    data: {
+      name: 'أحمد صاحب المطعم',
+      phone: '+966501234567',
+      role: 'owner',
+      isOnboarded: true,
+      restaurantId: restaurant.id,
+    },
+  });
+  console.log(`✅ تم إنشاء المستخدم التجريبي: ${demoUser.name}`);
+
+  // Create demo session
+  const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  await prisma.session.create({
+    data: {
+      token: 'demo-token-123',
+      userId: demoUser.id,
+      expiresAt: thirtyDaysFromNow,
+    },
+  });
+  console.log('✅ تم إنشاء جلسة تجريبية (demo-token-123)');
+
   console.log(`\n🎉 تم إنشاء ${totalDishes} صنف (${featuredDishes} أصناف مميزة) في ${Object.keys(categories).length} تصنيفات`);
   console.log('✅ اكتملت زراعة البيانات بنجاح!');
 }

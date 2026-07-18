@@ -6,6 +6,7 @@ import { X, Send, Mic, MicOff, Bot, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useStore } from '@/lib/store';
 import type { ChatMessage, Dish } from '@/lib/types';
+// Local fallback kept for offline mode
 import { getAIResponse } from '@/lib/ai-responses';
 
 export default function AIChat() {
@@ -109,12 +110,40 @@ export default function AIChat() {
     addChatMessage({ role: 'user', content: text });
     setIsTyping(true);
 
-    // Simulate AI thinking delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      // Call real AI API
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          dishContext: selectedDish ? {
+            name: selectedDish.name,
+            description: selectedDish.description,
+            price: selectedDish.price,
+          } : undefined,
+          cartItems: cart.map(item => ({
+            name: item.dish.name,
+            totalPrice: item.totalPrice,
+          })),
+          history: chatMessages.map(m => ({ role: m.role, content: m.content })),
+        }),
+      });
 
-    const response = getAIResponse(text, selectedDish, cart);
-    setIsTyping(false);
-    addChatMessage({ role: 'assistant', content: response });
+      if (res.ok) {
+        const data = await res.json();
+        setIsTyping(false);
+        addChatMessage({ role: 'assistant', content: data.response });
+      } else {
+        throw new Error('API failed');
+      }
+    } catch {
+      // Fallback to local AI responses if API fails
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      const response = getAIResponse(text, selectedDish, cart);
+      setIsTyping(false);
+      addChatMessage({ role: 'assistant', content: response });
+    }
 
     // Clear selected dish after AI responds
     if (selectedDish) {

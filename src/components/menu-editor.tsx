@@ -136,6 +136,28 @@ function emptyDish(categoryId: string): Dish {
 /* ═══════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════ */
+function AuthGuard({ children }: { children: React.ReactNode }) {
+  const { setView, isAuthenticated } = useStore();
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center gap-6 p-6 text-center">
+        <div className="w-20 h-20 rounded-full bg-[#1a1a2e] flex items-center justify-center">
+          <Edit3 className="h-10 w-10 text-[#d4a853]" />
+        </div>
+        <h2 className="text-2xl font-bold gold-gradient-text">محرر المنيو</h2>
+        <p className="text-muted-foreground max-w-sm">يجب تسجيل الدخول للوصول إلى محرر المنيو</p>
+        <Button onClick={() => setView('login')} className="gold-gradient hover:opacity-90">
+          تسجيل الدخول
+        </Button>
+        <Button variant="ghost" onClick={() => setView('landing')}>
+          العودة للرئيسية
+        </Button>
+      </div>
+    );
+  }
+  return <>{children}</>;
+}
+
 export default function MenuEditor() {
   const { categories, setCategories, setView } = useStore();
 
@@ -403,6 +425,7 @@ export default function MenuEditor() {
      RENDER
      ═══════════════════════════════════════════════ */
   return (
+    <AuthGuard>
     <div dir="rtl" className="min-h-screen flex flex-col" style={{ background: '#0a0a0f' }}>
       {/* ───── Top Bar ───── */}
       <header className="sticky top-0 z-40 border-b border-white/5 px-4 py-3 sm:px-6 backdrop-blur-xl" style={{ background: 'rgba(10,10,15,0.85)' }}>
@@ -1115,5 +1138,6 @@ export default function MenuEditor() {
         </DialogContent>
       </Dialog>
     </div>
+    </AuthGuard>
   );
 }

@@ -135,6 +135,12 @@ export default function Landing() {
               المميزات
             </button>
             <button
+              onClick={() => setView('login')}
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              تسجيل الدخول
+            </button>
+            <button
               onClick={() => setView('dashboard')}
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
@@ -149,10 +155,10 @@ export default function Landing() {
           </div>
 
           <Button
-            onClick={() => setView('menu')}
+            onClick={() => setView('login')}
             className="gold-gradient text-sm font-semibold hover:opacity-90"
           >
-            ابدأ الآن
+            تسجيل الدخول
           </Button>
         </div>
       </motion.nav>
@@ -431,7 +437,7 @@ export default function Landing() {
             </p>
             <Button
               size="lg"
-              onClick={() => setView('menu')}
+              onClick={() => setView('login')}
               className="mt-8 bg-background px-8 text-base font-semibold text-[#d4a853] hover:bg-background/90"
             >
               ابدأ مجاناً

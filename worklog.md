@@ -1,28 +1,28 @@
 ---
-Task ID: 1
+Task ID: 2
 Agent: Main Agent
-Task: Build MenuAI SaaS Platform - AI-Powered Smart Menu for Restaurants
+Task: Add real AI API integration + auth system with login, onboarding, and admin settings
 
 Work Log:
-- Initialized fullstack dev environment with Next.js 16, Tailwind CSS 4, shadcn/ui
-- Created Prisma schema with Restaurant, Category, Dish, Order, OrderItem, AnalyticsEvent models
-- Seeded database with 1 restaurant, 5 categories, 18 dishes with realistic Arabic data
-- Built dark premium theme (gold #d4a853 on #0a0a0f background) with custom animations
-- Configured RTL Arabic layout with Tajawal font
-- Created Zustand store for navigation, cart, chat, and UI state management
-- Built AI response engine with 20+ Arabic templates for waiter personality
-- Created demo analytics data (7-day revenue, top dishes, hourly orders, AI insights)
-- Built API routes: GET /api/menu, POST /api/order
-- Built 7 UI components: Landing, SmartMenu, DishDetail, AIChat, SmartCart, Dashboard, MenuEditor, Checkout
-- Main page.tsx ties all views together with AnimatePresence transitions
-- Verified all views work via agent-browser: Landing, Menu (18 dishes), Dish Detail, Cart, AI Chat, Dashboard (KPIs + Charts), Menu Editor
-- Zero lint errors, zero console errors
+- Updated Prisma schema: added User model (roles, phone, email, isOnboarded, restaurantId) and Session model
+- Built 6 auth API routes: send-otp, verify-otp, send-magic-link, verify-magic-link, me, logout
+- Created OTP store with rate limiting (3/min) and 2-min expiry
+- Built real AI chat API route using z-ai-web-dev-sdk LLM (glm-4-flash model)
+- Created login page with 6 states: method selection, phone input, OTP verification, email, email success, loading
+- Built 4-step onboarding wizard: restaurant type, name/theme/currency, AI menu generation, welcome success
+- Built admin settings page: profile, restaurant info, team management, security, subscription
+- Updated AI chat component to call real LLM API with fallback to local templates
+- Added auth guards (AuthGuard components) to Dashboard and MenuEditor
+- Added user welcome message in dashboard header
+- Updated landing page with "تسجيل الدخول" nav button
+- Fixed onboarding step 3→4 transition bug
+- Fixed React hooks conditional call errors (moved auth guards to wrapper components)
+- Verified complete auth flow via agent-browser: login → OTP → onboarding → dashboard → settings → AI chat
 
 Stage Summary:
-- Complete interactive SaaS prototype with 4 main views
-- Smart menu with AI recommendations, search, category filtering
-- AI Waiter chat panel (Leo) with Arabic responses
-- Smart cart with AI upselling suggestions
-- Owner dashboard with KPIs, revenue charts, AI insights
-- Menu editor with drag & drop, AI description generator
-- All text in Arabic, RTL layout, gold/dark premium theme
+- Real LLM integration confirmed working (AI responds with contextual Arabic, not templates)
+- WhatsApp OTP flow: phone input → 6-digit code (demo: 123456) → auto-verify → onboarding
+- Email magic link flow with demo shortcut
+- Auth-protected views: Dashboard and Menu Editor require login
+- Zero lint errors, zero console errors after all fixes
+- Session management with JWT-like tokens stored in database

@@ -20,6 +20,7 @@ import {
   BarChart3,
   Target,
   Users,
+  Settings,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -141,10 +142,35 @@ function InsightBorder({ type }: { type: 'success' | 'warning' | 'info' }) {
    Dashboard Component
    ═══════════════════════════════════════════════════════════════ */
 
+function DashboardAuthGuard({ children, user }: { children: React.ReactNode; user: { name?: string } | null }) {
+  const { setView, isAuthenticated } = useStore();
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center gap-6 p-6 text-center">
+        <div className="w-20 h-20 rounded-full bg-[#1a1a2e] flex items-center justify-center">
+          <BarChart3 className="h-10 w-10 text-[#d4a853]" />
+        </div>
+        <h2 className="text-2xl font-bold gold-gradient-text">لوحة التحكم</h2>
+        <p className="text-muted-foreground max-w-sm">يجب تسجيل الدخول للوصول إلى لوحة التحكم وأدوات إدارة المطعم</p>
+        <Button onClick={() => setView('login')} className="gold-gradient hover:opacity-90">
+          تسجيل الدخول
+        </Button>
+        <Button variant="ghost" onClick={() => setView('landing')}>
+          العودة للرئيسية
+        </Button>
+      </div>
+    );
+  }
+  return <>{children}</>;
+}
+
+const AuthGuard = DashboardAuthGuard;
+
 export default function Dashboard() {
-  const setView = useStore((s) => s.setView);
+  const { setView, isAuthenticated, user } = useStore();
 
   return (
+    <AuthGuard user={user}>
     <div dir="rtl" className="min-h-screen bg-[#0a0a0f] text-[#f0ece4] pb-12">
       {/* ──────── Top Bar ──────── */}
       <div className="sticky top-0 z-30 backdrop-blur-xl bg-[#0a0a0f]/80 border-b border-white/[0.06]">
@@ -156,9 +182,22 @@ export default function Dashboard() {
             <h1 className="text-xl sm:text-2xl font-bold gold-gradient-text">
               لوحة التحكم
             </h1>
+            {user?.name && (
+              <span className="hidden sm:block text-xs text-muted-foreground mr-2">
+                مرحباً، {user.name}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => setView('settings')}
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -543,5 +582,6 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+    </AuthGuard>
   );
 }

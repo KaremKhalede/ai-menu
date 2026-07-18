@@ -50,4 +50,20 @@ export interface AIInsight {
   action?: string;
 }
 
-export type ViewType = 'landing' | 'menu' | 'dashboard' | 'menu-editor';
+export type ViewType = 'landing' | 'login' | 'onboarding' | 'menu' | 'dashboard' | 'menu-editor' | 'settings';
+
+export interface User {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  role: 'owner' | 'manager' | 'employee';
+}
+
+export interface Restaurant {
+  name: string;
+  description: string;
+  type: string;
+  theme: 'luxury' | 'modern' | 'warm';
+  currency: string;
+}

@@ -7,6 +7,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id            String   @id @default(cuid())
+  name          String?
+  email         String?  @unique
+  phone         String?  @unique
+  role          String   @default("owner")  // owner, manager, staff
+  avatar        String?
+  isOnboarded   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  restaurantId  String?
+  restaurant    Restaurant? @relation(fields: [restaurantId], references: [id])
+  sessions      Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 model Restaurant {
   id          String   @id @default(cuid())
   name        String
@@ -20,6 +46,7 @@ model Restaurant {
 
   categories  Category[]
   orders      Order[]
+  users       User[]
 }
 
 model Category {
