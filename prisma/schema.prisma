@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Restaurant {
+  id          String   @id @default(cuid())
+  name        String
+  nameEn      String?
+  description String?
+  logo        String?
+  theme       String   @default("luxury")
+  currency    String   @default("SAR")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  categories  Category[]
+  orders      Order[]
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  nameEn      String?
+  icon        String?
+  sortOrder   Int      @default(0)
+  restaurantId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  restaurant  Restaurant @relation(fields: [restaurantId], references: [id])
+  dishes      Dish[]
+}
+
+model Dish {
+  id           String   @id @default(cuid())
+  name         String
+  nameEn       String?
+  description  String
+  price        Float
+  image        String?
+  categoryId   String
+  rating       Float    @default(4.5)
+  orderCount   Int      @default(0)
+  tags         String   @default("[]")
+  isAvailable  Boolean  @default(true)
+  isFeatured   Boolean  @default(false)
+  addons       String   @default("[]")
+  pairings     String   @default("[]")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  category     Category @relation(fields: [categoryId], references: [id])
+  orderItems   OrderItem[]
+}
+
+model Order {
+  id            String   @id @default(cuid())
+  tableNumber   Int?
+  customerName  String?
+  total         Float
+  status        String   @default("pending")
+  restaurantId  String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id])
+  items         OrderItem[]
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  dishId    String
+  quantity  Int     @default(1)
+  addons    String  @default("[]")
+  price     Float
+
+  order     Order   @relation(fields: [orderId], references: [id])
+  dish      Dish    @relation(fields: [dishId], references: [id])
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  type      String
+  data      String   @default("{}")
+  createdAt DateTime @default(now())
+}
