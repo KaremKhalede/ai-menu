@@ -95,3 +95,51 @@ export const kpiData = {
   conversionRate: 34.7,
   topDishName: 'كبسة لحم',
 };
+
+// AI Revenue Engine KPIs
+export const aiRevenueKPIs = {
+  totalAISuggestions: 1247,
+  aiConversionRate: 34.2,
+  aiRevenueGenerated: 12840,
+  aiLiftPercentage: 18.5,
+  avgOrderWithoutAI: 42.3,
+  avgOrderWithAI: 50.1,
+  topConvertingDishes: [
+    { name: 'كبسة لحم', suggestions: 89, conversions: 42, revenue: 12600 },
+    { name: 'كنافة نابلسية', suggestions: 67, conversions: 28, revenue: 4200 },
+    { name: 'مشاوي مشكّلة', suggestions: 54, conversions: 22, revenue: 7700 },
+  ],
+  suggestionsByContext: {
+    chat: { suggestions: 523, conversions: 198 },
+    cart_upsell: { suggestions: 445, conversions: 167 },
+    menu_featured: { suggestions: 279, conversions: 61 },
+  },
+};
+
+// Conversion Funnel
+export const conversionFunnel = [
+  { stage: 'زيارة المنيو', count: 2540, percentage: 100 },
+  { stage: 'مشاهدة طبق', count: 1870, percentage: 73.6 },
+  { stage: 'فتح التفاصيل', count: 1120, percentage: 44.1 },
+  { stage: 'إضافة للسلة', count: 709, percentage: 27.9 },
+  { stage: 'إتمام الطلب', count: 534, percentage: 21.0 },
+];
+
+// Drop-off Analysis
+export const dropOffAnalysis = [
+  { stage: 'من المنيو للتفاصيل', rate: 40.1, severity: 'high' as const, suggestion: 'حسّن صور الأطباق ووصفها لجذب النقرات' },
+  { stage: 'من التفاصيل للسلة', rate: 36.7, severity: 'medium' as const, suggestion: 'أضف زر إضافة أوضح وعروض على الأصناف' },
+  { stage: 'من السلة للدفع', rate: 24.7, severity: 'low' as const, suggestion: 'بسّط عملية الدفع وقلل الخطوات' },
+];
+
+// Enhanced KPIs
+export const enhancedKPIs = {
+  totalRevenue: 35530,
+  totalOrders: 709,
+  avgOrderValue: 50.1,
+  conversionRate: 34.7,
+  aiUpsellRate: 34.2,
+  dropOffRate: 66.0,
+  customerRetention: 68.5,
+  repeatCustomerRate: 42.3,
+};

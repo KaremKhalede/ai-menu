@@ -8,6 +8,11 @@ import type {
   Addon,
   User,
   Restaurant,
+  AISuggestion,
+  RevenueEvent,
+  AIRevenueMetrics,
+  PersonalityMode,
+  SortCriteria,
 } from './types';
 
 interface MenuAIState {
@@ -54,6 +59,24 @@ interface MenuAIState {
   setShowCheckout: (show: boolean) => void;
   orderPlaced: boolean;
   setOrderPlaced: (placed: boolean) => void;
+
+  // AI Revenue Engine
+  aiSuggestions: AISuggestion[];
+  addAISuggestion: (s: Omit<AISuggestion, 'id' | 'suggestedAt'>) => void;
+  markSuggestionConverted: (dishId: string, orderValue?: number) => void;
+  aiMetrics: AIRevenueMetrics | null;
+  revenueEvents: RevenueEvent[];
+  addRevenueEvent: (event: RevenueEvent) => void;
+
+  // Voice Personality
+  personalityMode: PersonalityMode;
+  setPersonalityMode: (mode: PersonalityMode) => void;
+
+  // Smart Sort
+  sortCriteria: SortCriteria;
+  setSortCriteria: (criteria: SortCriteria) => void;
+  smartSortEnabled: boolean;
+  toggleSmartSort: () => void;
 }
 
 export const useStore = create<MenuAIState>((set, get) => ({
@@ -169,4 +192,42 @@ export const useStore = create<MenuAIState>((set, get) => ({
   setShowCheckout: (show) => set({ showCheckout: show }),
   orderPlaced: false,
   setOrderPlaced: (placed) => set({ orderPlaced: placed }),
+
+  // AI Revenue Engine
+  aiSuggestions: [],
+  addAISuggestion: (s) =>
+    set((state) => ({
+      aiSuggestions: [
+        ...state.aiSuggestions,
+        {
+          ...s,
+          id: crypto.randomUUID(),
+          suggestedAt: new Date(),
+        },
+      ],
+    })),
+  markSuggestionConverted: (dishId, orderValue) =>
+    set((state) => ({
+      aiSuggestions: state.aiSuggestions.map((s) =>
+        s.dishId === dishId
+          ? { ...s, converted: true, convertedAt: new Date(), orderValue }
+          : s
+      ),
+    })),
+  aiMetrics: null,
+  revenueEvents: [],
+  addRevenueEvent: (event) =>
+    set((state) => ({
+      revenueEvents: [...state.revenueEvents, event],
+    })),
+
+  // Voice Personality
+  personalityMode: 'luxury',
+  setPersonalityMode: (mode) => set({ personalityMode: mode }),
+
+  // Smart Sort
+  sortCriteria: 'profitability',
+  setSortCriteria: (criteria) => set({ sortCriteria: criteria }),
+  smartSortEnabled: false,
+  toggleSmartSort: () => set((state) => ({ smartSortEnabled: !state.smartSortEnabled })),
 }));

@@ -1,7 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { dailyRevenue, topDishes, hourlyOrders, aiInsights, kpiData } from '@/lib/demo-data';
+import {
+  dailyRevenue,
+  hourlyOrders,
+  aiInsights,
+  enhancedKPIs,
+  aiRevenueKPIs,
+  conversionFunnel,
+  dropOffAnalysis,
+} from '@/lib/demo-data';
 import { useStore } from '@/lib/store';
 import {
   ArrowRight,
@@ -21,12 +29,20 @@ import {
   Target,
   Users,
   Settings,
+  Sparkles,
+  Flame,
+  TrendingDownIcon,
+  BrainCircuit,
+  Zap,
+  ArrowDownUp,
+  UserCheck,
+  MapPin,
+  LayoutGrid,
+  FileText,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import {
   BarChart,
   Bar,
@@ -46,49 +62,94 @@ const fadeUp = {
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.08, duration: 0.5, ease: 'easeOut' },
+    transition: { delay: i * 0.06, duration: 0.5, ease: 'easeOut' as const },
   }),
 };
 
 const stagger = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.08 } },
+  visible: { transition: { staggerChildren: 0.06 } },
 };
 
-/* ───────────────────── KPI Config ───────────────────── */
+/* ───────────────────── KPI Row 1 Config ───────────────────── */
 
-const kpiCards = [
+const kpiRow1 = [
   {
     label: 'إجمالي الإيرادات',
-    value: `${kpiData.totalRevenue.toLocaleString('ar-SA')} ر.س`,
+    value: `${enhancedKPIs.totalRevenue.toLocaleString('ar-SA')} ر.س`,
     icon: DollarSign,
     trend: '+12%',
     trendUp: true,
   },
   {
     label: 'إجمالي الطلبات',
-    value: `${kpiData.totalOrders}`,
+    value: `${enhancedKPIs.totalOrders}`,
     icon: ShoppingBag,
     trend: '+8%',
     trendUp: true,
   },
   {
     label: 'متوسط قيمة الطلب',
-    value: `${kpiData.avgOrderValue} ر.س`,
+    value: `${enhancedKPIs.avgOrderValue} ر.س`,
     icon: Target,
     trend: '+5%',
     trendUp: true,
   },
   {
     label: 'نسبة التحويل',
-    value: `${kpiData.conversionRate}%`,
+    value: `${enhancedKPIs.conversionRate}%`,
     icon: Percent,
     trend: '-2%',
     trendUp: false,
   },
+  {
+    label: 'نسبة نجاح AI Upsell',
+    value: `${enhancedKPIs.aiUpsellRate}%`,
+    icon: Flame,
+    trend: '+15%',
+    trendUp: true,
+    highlight: true as const,
+  },
+  {
+    label: 'معدل التسرب',
+    value: `${enhancedKPIs.dropOffRate}%`,
+    icon: TrendingDownIcon,
+    trend: '-3%',
+    trendUp: true,
+    invertTrend: true as const,
+  },
 ];
 
-/* ───────────────────── Custom Tooltip ───────────────────── */
+/* ───────────────────── KPI Row 2 Config (AI Engine) ───────────────────── */
+
+const kpiRow2 = [
+  {
+    label: 'إيرادات AI',
+    value: `${aiRevenueKPIs.aiRevenueGenerated.toLocaleString('ar-SA')} ر.س`,
+    icon: BrainCircuit,
+    subtext: `من ${aiRevenueKPIs.totalAISuggestions} اقتراح`,
+  },
+  {
+    label: 'تحسين الطلب بـ AI',
+    value: `+${aiRevenueKPIs.aiLiftPercentage}%`,
+    icon: TrendingUp,
+    subtext: `${aiRevenueKPIs.avgOrderWithoutAI} → ${aiRevenueKPIs.avgOrderWithAI} ر.س`,
+  },
+  {
+    label: 'اقتراحات AI',
+    value: `${aiRevenueKPIs.totalAISuggestions.toLocaleString('ar-SA')}`,
+    icon: Zap,
+    subtext: `${aiRevenueKPIs.aiConversionRate}% معدل التحويل`,
+  },
+  {
+    label: 'معدل تحويل AI',
+    value: `${aiRevenueKPIs.aiConversionRate}%`,
+    icon: Sparkles,
+    subtext: `${Math.round(aiRevenueKPIs.aiConversionRate * aiRevenueKPIs.totalAISuggestions / 100)} تحويل`,
+  },
+];
+
+/* ───────────────────── Custom Tooltips ───────────────────── */
 
 function GoldTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; dataKey: string }>; label?: string }) {
   if (!active || !payload?.length) return null;
@@ -114,7 +175,7 @@ function BarTooltip({ active, payload, label }: { active?: boolean; payload?: Ar
   );
 }
 
-/* ───────────────────── Insight Icon ───────────────────── */
+/* ───────────────────── Insight Helpers ───────────────────── */
 
 function InsightIcon({ type }: { type: 'success' | 'warning' | 'info' }) {
   switch (type) {
@@ -135,6 +196,19 @@ function InsightBorder({ type }: { type: 'success' | 'warning' | 'info' }) {
       return 'border-amber-500/30';
     case 'info':
       return 'border-orange-500/30';
+  }
+}
+
+/* ───────────────────── Severity Helpers ───────────────────── */
+
+function SeverityConfig(severity: 'high' | 'medium' | 'low') {
+  switch (severity) {
+    case 'high':
+      return { color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30', dot: 'bg-red-400', label: 'مرتفع' };
+    case 'medium':
+      return { color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/30', dot: 'bg-amber-400', label: 'متوسط' };
+    case 'low':
+      return { color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', dot: 'bg-emerald-400', label: 'منخفض' };
   }
 }
 
@@ -166,85 +240,213 @@ function DashboardAuthGuard({ children, user }: { children: React.ReactNode; use
 
 const AuthGuard = DashboardAuthGuard;
 
+/* ──────────────── Conversion Funnel Component ──────────────── */
+
+function ConversionFunnelViz() {
+  const maxCount = conversionFunnel[0].count;
+  const barColors = [
+    'from-[#d4a853] to-[#c49a45]',
+    'from-[#c49a45] to-[#b08c3d]',
+    'from-[#b08c3d] to-[#9a7a35]',
+    'from-[#9a7a35] to-[#7a6229]',
+    'from-[#7a6229] to-[#5e4c20]',
+  ];
+
+  return (
+    <div className="space-y-2.5">
+      {conversionFunnel.map((step, i) => {
+        const widthPct = (step.count / maxCount) * 100;
+        const dropOff = i > 0
+          ? ((conversionFunnel[i - 1].count - step.count) / conversionFunnel[i - 1].count * 100).toFixed(1)
+          : null;
+
+        return (
+          <div key={step.stage}>
+            {/* Drop-off indicator */}
+            {dropOff && (
+              <div className="flex justify-center mb-1">
+                <span className="text-[11px] font-medium text-red-400 bg-red-500/10 px-2.5 py-0.5 rounded-full">
+                  ↓ تسرب {dropOff}%
+                </span>
+              </div>
+            )}
+            {/* Bar */}
+            <div className="relative group">
+              <motion.div
+                initial={{ scaleX: 0, opacity: 0 }}
+                animate={{ scaleX: 1, opacity: 1 }}
+                transition={{ delay: 0.5 + i * 0.1, duration: 0.5, ease: 'easeOut' }}
+                style={{ width: `${widthPct}%`, transformOrigin: 'right' }}
+                className={`h-11 rounded-xl bg-gradient-to-l ${barColors[i]} flex items-center justify-between px-4 relative overflow-hidden`}
+              >
+                {/* Shine effect */}
+                <div className="absolute inset-0 bg-gradient-to-l from-white/[0.08] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="text-sm font-bold text-[#0a0a0f] z-10">{step.stage}</span>
+                <div className="flex items-center gap-2 z-10">
+                  <span className="text-xs font-semibold text-[#0a0a0f]/80">{step.count.toLocaleString('ar-SA')}</span>
+                  <span className="text-[11px] font-bold text-[#0a0a0f]/60 bg-black/10 px-2 py-0.5 rounded-full">
+                    {step.percentage}%
+                  </span>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ──────────────── Smart Sort Handler ──────────────── */
+
+function handleSmartSort() {
+  fetch('/api/menu/smart-sort', { method: 'POST' })
+    .then((res) => res.json())
+    .then(() => {
+      // Optionally trigger a toast or state update
+    })
+    .catch(() => {
+      // Silent fail for demo
+    });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Main Dashboard Export
+   ═══════════════════════════════════════════════════════════════ */
+
 export default function Dashboard() {
   const { setView, isAuthenticated, user } = useStore();
+
+  // Enhanced AI insights with 2 new entries
+  const allInsights = [
+    ...aiInsights,
+    {
+      type: 'success' as const,
+      title: 'تحسن أداء اقتراحات AI',
+      description: 'نسبة نجاح اقتراحات AI ارتفعت 15% هذا الأسبوع. النظام يتعلم من سلوك العملاء ويحسّن اقتراحاته تلقائياً.',
+      action: 'عرض تقرير AI',
+    },
+    {
+      type: 'success' as const,
+      title: 'انخفاض معدل التسرب',
+      description: 'معدل التسرب انخفض 3% بفضل تحسين واجهة تفاصيل الأطباق.',
+      action: 'عرض تحليل التسرب',
+    },
+  ];
 
   return (
     <AuthGuard user={user}>
     <div dir="rtl" className="min-h-screen bg-[#0a0a0f] text-[#f0ece4] pb-12">
-      {/* ──────── Top Bar ──────── */}
+      {/* ══════════════ A. Top Bar ══════════════ */}
       <div className="sticky top-0 z-30 backdrop-blur-xl bg-[#0a0a0f]/80 border-b border-white/[0.06]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl gold-gradient flex items-center justify-center">
-              <BarChart3 className="h-5 w-5 text-[#0a0a0f]" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between mb-3 sm:mb-0">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl gold-gradient flex items-center justify-center">
+                <BarChart3 className="h-5 w-5 text-[#0a0a0f]" />
+              </div>
+              <h1 className="text-xl sm:text-2xl font-bold gold-gradient-text">
+                لوحة التحكم
+              </h1>
+              {user?.name && (
+                <span className="hidden sm:block text-xs text-muted-foreground mr-2">
+                  مرحباً، {user.name}
+                </span>
+              )}
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold gold-gradient-text">
-              لوحة التحكم
-            </h1>
-            {user?.name && (
-              <span className="hidden sm:block text-xs text-muted-foreground mr-2">
-                مرحباً، {user.name}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground shrink-0"
               onClick={() => setView('settings')}
             >
               <Settings className="h-5 w-5" />
             </Button>
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             <Button
               variant="outline"
               size="sm"
-              className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] text-xs sm:text-sm"
+              className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] text-xs whitespace-nowrap shrink-0"
               onClick={() => setView('menu')}
             >
-              <ArrowRight className="h-4 w-4 ml-1" />
-              العودة للقائمة
+              <UtensilsCrossed className="h-3.5 w-3.5 ml-1" />
+              المنيو
             </Button>
             <Button
+              variant="outline"
               size="sm"
-              className="gold-gradient text-[#0a0a0f] hover:opacity-90 text-xs sm:text-sm font-semibold"
+              className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] text-xs whitespace-nowrap shrink-0"
               onClick={() => setView('menu-editor')}
             >
-              <Lightbulb className="h-4 w-4 ml-1" />
+              <LayoutGrid className="h-3.5 w-3.5 ml-1" />
               محرر المنيو
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] text-xs whitespace-nowrap shrink-0"
+              onClick={() => setView('auto-menu-generator')}
+            >
+              <Sparkles className="h-3.5 w-3.5 ml-1" />
+              توليد قائمة AI
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] text-xs whitespace-nowrap shrink-0"
+              onClick={() => setView('heatmap')}
+            >
+              <MapPin className="h-3.5 w-3.5 ml-1" />
+              خريطة حرارية
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] text-xs whitespace-nowrap shrink-0"
+              onClick={() => setView('crm')}
+            >
+              <Users className="h-3.5 w-3.5 ml-1" />
+              CRM
             </Button>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
-        {/* ──────── KPI Cards ──────── */}
+
+        {/* ══════════════ B. KPI Cards Row 1 — Main KPIs (6 cards) ══════════════ */}
         <motion.div
-          className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4"
           variants={stagger}
           initial="hidden"
           animate="visible"
         >
-          {kpiCards.map((kpi, i) => {
+          {kpiRow1.map((kpi, i) => {
             const Icon = kpi.icon;
+            const isHighlight = (kpi as { highlight?: boolean }).highlight;
+            const invertTrend = (kpi as { invertTrend?: boolean }).invertTrend;
+            // For drop-off rate: -3% is actually good (less drop-off), so show green
+            const isTrendPositive = invertTrend ? kpi.trendUp : kpi.trendUp;
+
             return (
               <motion.div key={kpi.label} custom={i} variants={fadeUp}>
-                <Card className="glass-card border-0 p-0 overflow-hidden">
-                  <CardContent className="p-4 sm:p-5">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="h-10 w-10 rounded-xl bg-[#d4a853]/10 flex items-center justify-center">
-                        <Icon className="h-5 w-5 text-[#d4a853]" />
+                <Card className={`glass-card border-0 p-0 overflow-hidden ${isHighlight ? 'ring-1 ring-[#d4a853]/30' : ''}`}>
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-start justify-between mb-2.5">
+                      <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${isHighlight ? 'bg-[#d4a853]/20' : 'bg-[#d4a853]/10'}`}>
+                        <Icon className={`h-4.5 w-4.5 ${isHighlight ? 'text-[#e8c47c]' : 'text-[#d4a853]'}`} />
                       </div>
                       <div
-                        className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
-                          kpi.trendUp
+                        className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                          isTrendPositive
                             ? 'bg-emerald-500/10 text-emerald-400'
                             : 'bg-red-500/10 text-red-400'
                         }`}
                       >
-                        {kpi.trendUp ? (
+                        {isTrendPositive ? (
                           <TrendingUp className="h-3 w-3" />
                         ) : (
                           <TrendingDown className="h-3 w-3" />
@@ -252,10 +454,10 @@ export default function Dashboard() {
                         {kpi.trend}
                       </div>
                     </div>
-                    <p className="text-2xl sm:text-3xl font-bold text-[#f0ece4] mb-1">
+                    <p className="text-xl sm:text-2xl font-bold text-[#f0ece4] mb-0.5 leading-tight">
                       {kpi.value}
                     </p>
-                    <p className="text-xs sm:text-sm text-[#8a8578]">{kpi.label}</p>
+                    <p className="text-[11px] sm:text-xs text-[#8a8578] truncate">{kpi.label}</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -263,11 +465,53 @@ export default function Dashboard() {
           })}
         </motion.div>
 
-        {/* ──────── Revenue Chart ──────── */}
+        {/* ══════════════ C. KPI Cards Row 2 — AI Engine KPIs (4 cards) ══════════════ */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35, duration: 0.5 }}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <BrainCircuit className="h-4 w-4 text-[#d4a853]" />
+            <h2 className="text-sm font-bold text-[#d4a853]">محرك إيرادات الذكاء الاصطناعي</h2>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {kpiRow2.map((kpi, i) => {
+              const Icon = kpi.icon;
+              return (
+                <motion.div
+                  key={kpi.label}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 + i * 0.06, duration: 0.4 }}
+                >
+                  <Card className="glass-card border-0 p-0 overflow-hidden">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <div className="h-8 w-8 rounded-lg bg-[#d4a853]/10 flex items-center justify-center">
+                          <Icon className="h-4 w-4 text-[#d4a853]" />
+                        </div>
+                        <p className="text-[11px] sm:text-xs text-[#8a8578]">{kpi.label}</p>
+                      </div>
+                      <p className="text-xl sm:text-2xl font-bold text-[#f0ece4] mb-0.5 leading-tight">
+                        {kpi.value}
+                      </p>
+                      {kpi.subtext && (
+                        <p className="text-[10px] sm:text-xs text-[#8a8578]/70">{kpi.subtext}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+
+        {/* ══════════════ D. Revenue Chart ══════════════ */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55, duration: 0.5 }}
         >
           <Card className="glass-card border-0 overflow-hidden">
             <CardHeader className="pb-2">
@@ -320,78 +564,39 @@ export default function Dashboard() {
           </Card>
         </motion.div>
 
-        {/* ──────── Two Column Layout ──────── */}
+        {/* ══════════════ E. Two Column Layout ══════════════ */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {/* ─── Left Column (RTL: appears right) ─── */}
+
+          {/* ─── LEFT Column (RTL: appears right) ─── */}
           <div className="space-y-4 sm:space-y-6">
-            {/* Top Dishes */}
+
+            {/* Conversion Funnel */}
             <motion.div
               initial={{ opacity: 0, x: 24 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.45, duration: 0.5 }}
+              transition={{ delay: 0.65, duration: 0.5 }}
             >
               <Card className="glass-card border-0 overflow-hidden">
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
-                    <UtensilsCrossed className="h-5 w-5 text-[#d4a853]" />
+                    <ArrowDownUp className="h-5 w-5 text-[#d4a853]" />
                     <CardTitle className="text-lg font-bold text-[#f0ece4]">
-                      الأطباق الأكثر طلباً
+                      قمع التحويل
                     </CardTitle>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {topDishes.map((dish, i) => {
-                    const maxOrders = topDishes[0].orders;
-                    const pct = Math.round((dish.orders / maxOrders) * 100);
-                    const isTop = i === 0;
-                    return (
-                      <motion.div
-                        key={dish.name}
-                        initial={{ opacity: 0, x: 16 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.5 + i * 0.07, duration: 0.4 }}
-                        className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${
-                          isTop
-                            ? 'bg-[#d4a853]/10 border border-[#d4a853]/20'
-                            : 'hover:bg-white/[0.03]'
-                        }`}
-                      >
-                        {/* Rank */}
-                        <div
-                          className={`h-8 w-8 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 ${
-                            isTop
-                              ? 'gold-gradient text-[#0a0a0f]'
-                              : 'bg-white/[0.06] text-[#8a8578]'
-                          }`}
-                        >
-                          {i + 1}
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1.5">
-                            <p
-                              className={`text-sm font-semibold truncate ${
-                                isTop ? 'text-[#d4a853]' : 'text-[#f0ece4]'
-                              }`}
-                            >
-                              {dish.name}
-                            </p>
-                            <div className="text-left shrink-0 mr-2">
-                              <p className="text-xs text-[#8a8578]">{dish.orders} طلب</p>
-                              <p className="text-xs font-semibold text-[#f0ece4]">
-                                {dish.revenue.toLocaleString('ar-SA')} ر.س
-                              </p>
-                            </div>
-                          </div>
-                          <Progress
-                            value={pct}
-                            className="h-1.5"
-                          />
-                        </div>
-                      </motion.div>
-                    );
-                  })}
+                <CardContent>
+                  <ConversionFunnelViz />
+                  <div className="flex items-center gap-4 mt-4 text-[11px] text-[#8a8578]">
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-2.5 w-2.5 rounded-sm bg-[#d4a853]" />
+                      <span>مرحلة التحويل</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-2.5 w-2.5 rounded-sm bg-red-500/30 border border-red-400" />
+                      <span>نسبة التسرب</span>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
@@ -400,7 +605,7 @@ export default function Dashboard() {
             <motion.div
               initial={{ opacity: 0, x: 24 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.85, duration: 0.5 }}
+              transition={{ delay: 0.8, duration: 0.5 }}
             >
               <Card className="glass-card border-0 overflow-hidden">
                 <CardHeader className="pb-2">
@@ -442,7 +647,8 @@ export default function Dashboard() {
                           maxBarSize={20}
                           fill="#d4a853"
                           fillOpacity={0.7}
-                          shape={(props: Record<string, unknown>) => {
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          shape={((props: any) => {
                             const { x, y, width, height, payload } = props as {
                               x: number;
                               y: number;
@@ -466,7 +672,7 @@ export default function Dashboard() {
                                 fillOpacity={isPeak ? 1 : 0.6}
                               />
                             );
-                          }}
+                          })}
                         />
                       </BarChart>
                     </ResponsiveContainer>
@@ -486,13 +692,14 @@ export default function Dashboard() {
             </motion.div>
           </div>
 
-          {/* ─── Right Column (RTL: appears left) ─── */}
+          {/* ─── RIGHT Column (RTL: appears left) ─── */}
           <div className="space-y-4 sm:space-y-6">
-            {/* AI Insights */}
+
+            {/* AI Insights (enhanced with 2 more) */}
             <motion.div
               initial={{ opacity: 0, x: -24 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.5, duration: 0.5 }}
+              transition={{ delay: 0.65, duration: 0.5 }}
             >
               <Card className="glass-card border-0 overflow-hidden">
                 <CardHeader className="pb-3">
@@ -503,13 +710,13 @@ export default function Dashboard() {
                     </CardTitle>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
-                  {aiInsights.map((insight, i) => (
+                <CardContent className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+                  {allInsights.map((insight, i) => (
                     <motion.div
                       key={i}
                       initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.55 + i * 0.08, duration: 0.4 }}
+                      transition={{ delay: 0.7 + i * 0.06, duration: 0.4 }}
                       className={`p-3 rounded-xl border ${InsightBorder({ type: insight.type })} bg-white/[0.02]`}
                     >
                       <div className="flex gap-2.5">
@@ -536,11 +743,57 @@ export default function Dashboard() {
               </Card>
             </motion.div>
 
-            {/* Quick Actions */}
+            {/* Drop-off Analysis */}
             <motion.div
               initial={{ opacity: 0, x: -24 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.9, duration: 0.5 }}
+              transition={{ delay: 1.1, duration: 0.5 }}
+            >
+              <Card className="glass-card border-0 overflow-hidden">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingDown className="h-5 w-5 text-[#d4a853]" />
+                    <CardTitle className="text-lg font-bold text-[#f0ece4]">
+                      تحليل التسرب
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {dropOffAnalysis.map((item, i) => {
+                    const sev = SeverityConfig(item.severity);
+                    return (
+                      <motion.div
+                        key={item.stage}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 1.15 + i * 0.08, duration: 0.4 }}
+                        className={`p-3 rounded-xl border ${sev.border} bg-white/[0.02]`}
+                      >
+                        <div className="flex items-start justify-between mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <div className={`h-2 w-2 rounded-full ${sev.dot}`} />
+                            <p className="text-sm font-semibold text-[#f0ece4]">{item.stage}</p>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className={`text-xs font-bold ${sev.color}`}>{item.rate}%</span>
+                            <span className={`text-[10px] ${sev.color} ${sev.bg} px-1.5 py-0.5 rounded-full`}>
+                              {sev.label}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-[#8a8578] leading-relaxed mr-4">{item.suggestion}</p>
+                      </motion.div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Quick Actions (enhanced) */}
+            <motion.div
+              initial={{ opacity: 0, x: -24 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 1.25, duration: 0.5 }}
             >
               <Card className="glass-card border-0 overflow-hidden">
                 <CardHeader className="pb-3">
@@ -551,13 +804,13 @@ export default function Dashboard() {
                     </CardTitle>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-2.5">
                   <Button
                     className="w-full gold-gradient text-[#0a0a0f] hover:opacity-90 font-semibold justify-center gap-2"
-                    onClick={() => setView('menu-editor')}
+                    onClick={() => setView('auto-menu-generator')}
                   >
-                    <Lightbulb className="h-4 w-4" />
-                    إنشاء وصف AI
+                    <Sparkles className="h-4 w-4" />
+                    توليد قائمة بالذكاء الاصطناعي
                   </Button>
                   <Button
                     variant="outline"
@@ -569,11 +822,27 @@ export default function Dashboard() {
                   </Button>
                   <Button
                     variant="outline"
-                    disabled
-                    className="w-full border-white/[0.08] text-[#8a8578] font-semibold justify-center gap-2 cursor-not-allowed"
+                    className="w-full border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] font-semibold justify-center gap-2"
+                    onClick={() => setView('heatmap')}
                   >
-                    <BarChart3 className="h-4 w-4" />
-                    تقرير المبيعات
+                    <MapPin className="h-4 w-4" />
+                    خريطة حرارية
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] font-semibold justify-center gap-2"
+                    onClick={() => setView('crm')}
+                  >
+                    <UserCheck className="h-4 w-4" />
+                    CRM وإعادة استهداف
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] font-semibold justify-center gap-2"
+                    onClick={handleSmartSort}
+                  >
+                    <ArrowDownUp className="h-4 w-4" />
+                    ترتيب ذكي للمنيو
                   </Button>
                 </CardContent>
               </Card>

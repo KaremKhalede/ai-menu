@@ -14,6 +14,9 @@ import SmartCart from '@/components/smart-cart';
 import Dashboard from '@/components/dashboard';
 import MenuEditor from '@/components/menu-editor';
 import Checkout from '@/components/checkout';
+import CRMDashboard from '@/components/crm-dashboard';
+import AutoMenuGenerator from '@/components/auto-menu-generator';
+import HeatmapViewer from '@/components/heatmap-viewer';
 
 export default function Home() {
   const { view, setCategories, showCheckout, cart } = useStore();
@@ -90,6 +93,9 @@ export default function Home() {
             )}
             {view === 'dashboard' && <Dashboard />}
             {view === 'menu-editor' && <MenuEditor />}
+            {view === 'crm' && <CRMDashboard />}
+            {view === 'auto-menu-generator' && <AutoMenuGenerator />}
+            {view === 'heatmap' && <HeatmapViewer />}
           </motion.div>
         </AnimatePresence>
       )}
