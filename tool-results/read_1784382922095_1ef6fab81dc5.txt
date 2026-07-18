@@ -1,0 +1,1220 @@
+     1→'use client';
+     2→
+     3→import { useMemo } from 'react';
+     4→import { motion, AnimatePresence } from 'framer-motion';
+     5→import {
+     6→  Menu,
+     7→  X,
+     8→  ShoppingCart,
+     9→  Mic,
+    10→  Star,
+    11→  Sparkles,
+    12→  TrendingUp,
+    13→  ChevronRight,
+    14→  Plus,
+    15→  Minus,
+    16→  Trash2,
+    17→  ArrowRight,
+    18→  Play,
+    19→  Volume2,
+    20→  Bot,
+    21→  Flame,
+    22→} from 'lucide-react';
+    23→import { useServioStore, type MenuItem } from '@/lib/servio-store';
+    24→
+    25→// ─── Demo Menu Data ───────────────────────────────────────────────────────────
+    26→
+    27→const MENU_ITEMS: MenuItem[] = [
+    28→  {
+    29→    id: '1',
+    30→    name: 'Truffle Risotto',
+    31→    description:
+    32→      'Creamy arborio rice with black truffle shavings, aged parmesan, and a drizzle of truffle oil. A rich, earthy masterpiece.',
+    33→    price: 42,
+    34→    image:
+    35→      'https://images.unsplash.com/photo-1476124369491-e7addf5db371?w=400&h=300&fit=crop',
+    36→    badge: 'popular' as const,
+    37→  },
+    38→  {
+    39→    id: '2',
+    40→    name: 'Wagyu Tataki',
+    41→    description:
+    42→      'Lightly seared A5 wagyu with ponzu glaze, microgreens, and toasted sesame. Melt-in-your-mouth perfection.',
+    43→    price: 68,
+    44→    image:
+    45→      'https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=300&fit=crop',
+    46→    badge: 'recommended' as const,
+    47→  },
+    48→  {
+    49→    id: '3',
+    50→    name: 'Lobster Thermidor',
+    51→    description:
+    52→      'Whole Maine lobster in a rich brandy cream sauce, gratinated with gruyère. The ultimate indulgence.',
+    53→    price: 78,
+    54→    image:
+    55→      'https://images.unsplash.com/photo-1553621042-f6e147245754?w=400&h=300&fit=crop',
+    56→    badge: 'popular' as const,
+    57→  },
+    58→  {
+    59→    id: '4',
+    60→    name: 'Saffron Paella',
+    61→    description:
+    62→      'Traditional Valencian paella with saffron-infused rice, fresh seafood, and crispy socarrat bottom.',
+    63→    price: 55,
+    64→    image:
+    65→      'https://images.unsplash.com/photo-1534080564583-6be75777b70a?w=400&h=300&fit=crop',
+    66→  },
+    67→  {
+    68→    id: '5',
+    69→    name: 'Black Cod Miso',
+    70→    description:
+    71→      'Marinated 72 hours in white miso, then caramelized to perfection. Served with pickled ginger and edamame.',
+    72→    price: 58,
+    73→    image:
+    74→      'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=400&h=300&fit=crop',
+    75→    badge: 'new' as const,
+    76→  },
+    77→  {
+    78→    id: '6',
+    79→    name: 'Chocolate Soufflé',
+    80→    description:
+    81→      'Light, airy, and intensely chocolatey. Served with vanilla crème anglaise and gold leaf.',
+    82→    price: 28,
+    83→    image:
+    84→      'https://images.unsplash.com/photo-1541783245831-57d6fb0926d3?w=400&h=300&fit=crop',
+    85→    badge: 'recommended' as const,
+    86→  },
+    87→];
+    88→
+    89→// ─── Animation Variants ──────────────────────────────────────────────────────
+    90→
+    91→const fadeUp = {
+    92→  hidden: { opacity: 0, y: 24 },
+    93→  visible: (delay: number = 0) => ({
+    94→    opacity: 1,
+    95→    y: 0,
+    96→    transition: { duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94], delay },
+    97→  }),
+    98→};
+    99→
+   100→const staggerContainer = {
+   101→  hidden: {},
+   102→  visible: {
+   103→    transition: { staggerChildren: 0.12, delayChildren: 0.3 },
+   104→  },
+   105→};
+   106→
+   107→const scaleIn = {
+   108→  hidden: { opacity: 0, scale: 0.92 },
+   109→  visible: (delay: number = 0) => ({
+   110→    opacity: 1,
+   111→    scale: 1,
+   112→    transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94], delay },
+   113→  }),
+   114→  exit: {
+   115→    opacity: 0,
+   116→    scale: 0.95,
+   117→    transition: { duration: 0.3 },
+   118→  },
+   119→};
+   120→
+   121→const slideUp = {
+   122→  hidden: { y: '100%' },
+   123→  visible: {
+   124→    y: 0,
+   125→    transition: { type: 'spring', damping: 30, stiffness: 300 },
+   126→  },
+   127→  exit: {
+   128→    y: '100%',
+   129→    transition: { duration: 0.35, ease: 'easeIn' },
+   130→  },
+   131→};
+   132→
+   133→// ─── 1. Particles ─────────────────────────────────────────────────────────────
+   134→
+   135→function Particles() {
+   136→  const particles = useMemo(
+   137→    () =>
+   138→      Array.from({ length: 18 }, (_, i) => ({
+   139→        id: i,
+   140→        left: `${Math.random() * 100}%`,
+   141→        size: 1 + Math.random() * 2,
+   142→        duration: 8 + Math.random() * 12,
+   143→        delay: Math.random() * 10,
+   144→        opacity: 0.3 + Math.random() * 0.5,
+   145→      })),
+   146→    []
+   147→  );
+   148→
+   149→  return (
+   150→    <div className="fixed inset-0 z-[3] overflow-hidden pointer-events-none">
+   151→      {particles.map((p) => (
+   152→        <div
+   153→          key={p.id}
+   154→          className="particle"
+   155→          style={{
+   156→            left: p.left,
+   157→            bottom: '-10px',
+   158→            width: `${p.size}px`,
+   159→            height: `${p.size}px`,
+   160→            animationDuration: `${p.duration}s`,
+   161→            animationDelay: `${p.delay}s`,
+   162→            opacity: p.opacity,
+   163→            background: `rgba(201, 164, 108, ${p.opacity})`,
+   164→          }}
+   165→        />
+   166→      ))}
+   167→    </div>
+   168→  );
+   169→}
+   170→
+   171→// ─── 2. BackgroundLayer ───────────────────────────────────────────────────────
+   172→
+   173→function BackgroundLayer() {
+   174→  return (
+   175→    <div className="fixed inset-0 z-0 overflow-hidden">
+   176→      <motion.div
+   177→        className="absolute inset-0"
+   178→        style={{
+   179→          background:
+   180→            'linear-gradient(135deg, #0F0F0F 0%, #1a0f0a 25%, #0a0f1a 50%, #1a0f0a 75%, #0F0F0F 100%)',
+   181→          backgroundSize: '400% 400%',
+   182→        }}
+   183→        animate={{
+   184→          backgroundPosition: [
+   185→            '0% 0%',
+   186→            '100% 50%',
+   187→            '50% 100%',
+   188→            '0% 0%',
+   189→          ],
+   190→        }}
+   191→        transition={{
+   192→          duration: 20,
+   193→          ease: 'linear',
+   194→          repeat: Infinity,
+   195→          repeatType: 'loop',
+   196→        }}
+   197→      />
+   198→      <div className="absolute inset-0 video-overlay" />
+   199→    </div>
+   200→  );
+   201→}
+   202→
+   203→// ─── 3. Navigation ────────────────────────────────────────────────────────────
+   204→
+   205→function Navigation() {
+   206→  const { mobileMenuOpen, setMobileMenuOpen } = useServioStore();
+   207→
+   208→  const navLinks = ['Menu', 'AI Insights', 'Pricing'];
+   209→
+   210→  return (
+   211→    <>
+   212→      <motion.nav
+   213→        className="fixed top-0 z-50 w-full py-4 px-6"
+   214→        initial={{ y: -20, opacity: 0 }}
+   215→        animate={{ y: 0, opacity: 1 }}
+   216→        transition={{ duration: 0.7, delay: 0.1 }}
+   217→      >
+   218→        <div className="max-w-7xl mx-auto flex items-center justify-between">
+   219→          {/* Logo */}
+   220→          <motion.span
+   221→            className="font-playfair text-xl font-bold gold-text select-none"
+   222→            whileHover={{ scale: 1.03 }}
+   223→            transition={{ type: 'spring', stiffness: 400 }}
+   224→          >
+   225→            Servio AI
+   226→          </motion.span>
+   227→
+   228→          {/* Desktop nav */}
+   229→          <div className="hidden md:flex items-center gap-4">
+   230→            <div className="glass-pill flex items-center gap-6">
+   231→              {navLinks.map((link) => (
+   232→                <a
+   233→                  key={link}
+   234→                  href={`#${link.toLowerCase().replace(' ', '-')}`}
+   235→                  className="text-sm text-[#F5F0E8]/70 hover:text-[#C9A46C] transition-colors duration-300 cursor-pointer"
+   236→                >
+   237→                  {link}
+   238→                </a>
+   239→              ))}
+   240→            </div>
+   241→            <motion.button
+   242→              className="bg-[#C9A46C] text-[#0F0F0F] font-semibold px-5 py-2 rounded-full hover:bg-[#d4b07a] transition-colors duration-300"
+   243→              whileHover={{ scale: 1.05 }}
+   244→              whileTap={{ scale: 0.97 }}
+   245→            >
+   246→              Start Free
+   247→            </motion.button>
+   248→          </div>
+   249→
+   250→          {/* Mobile hamburger */}
+   251→          <motion.button
+   252→            className="md:hidden glass rounded-full p-2.5 flex items-center justify-center"
+   253→            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+   254→            whileTap={{ scale: 0.9 }}
+   255→          >
+   256→            {mobileMenuOpen ? (
+   257→              <X className="w-5 h-5 text-[#F5F0E8]" />
+   258→            ) : (
+   259→              <Menu className="w-5 h-5 text-[#F5F0E8]" />
+   260→            )}
+   261→          </motion.button>
+   262→        </div>
+   263→      </motion.nav>
+   264→
+   265→      {/* Mobile menu */}
+   266→      <AnimatePresence>
+   267→        {mobileMenuOpen && (
+   268→          <motion.div
+   269→            className="fixed inset-0 z-[45] glass-strong flex flex-col items-center justify-center gap-8"
+   270→            initial={{ opacity: 0 }}
+   271→            animate={{ opacity: 1 }}
+   272→            exit={{ opacity: 0 }}
+   273→            transition={{ duration: 0.4 }}
+   274→          >
+   275→            {navLinks.map((link, i) => (
+   276→              <motion.a
+   277→                key={link}
+   278→                href={`#${link.toLowerCase().replace(' ', '-')}`}
+   279→                className="text-2xl font-playfair font-semibold text-[#F5F0E8] hover:text-[#C9A46C] transition-colors duration-300"
+   280→                initial={{ opacity: 0, y: 20 }}
+   281→                animate={{ opacity: 1, y: 0 }}
+   282→                exit={{ opacity: 0, y: 10 }}
+   283→                transition={{ delay: i * 0.1, duration: 0.4 }}
+   284→                onClick={() => setMobileMenuOpen(false)}
+   285→              >
+   286→                {link}
+   287→              </motion.a>
+   288→            ))}
+   289→            <motion.button
+   290→              className="bg-[#C9A46C] text-[#0F0F0F] font-semibold px-8 py-3 rounded-full text-lg"
+   291→              initial={{ opacity: 0, y: 20 }}
+   292→              animate={{ opacity: 1, y: 0 }}
+   293→              exit={{ opacity: 0, y: 10 }}
+   294→              transition={{ delay: 0.35, duration: 0.4 }}
+   295→              whileHover={{ scale: 1.05 }}
+   296→              whileTap={{ scale: 0.95 }}
+   297→            >
+   298→              Start Free
+   299→            </motion.button>
+   300→          </motion.div>
+   301→        )}
+   302→      </AnimatePresence>
+   303→    </>
+   304→  );
+   305→}
+   306→
+   307→// ─── 4. HeroSection ───────────────────────────────────────────────────────────
+   308→
+   309→function HeroSection() {
+   310→  return (
+   311→    <section className="relative z-10 min-h-screen flex items-center justify-center overflow-hidden">
+   312→      {/* Warm glow spots */}
+   313→      <div className="warm-glow w-[400px] h-[400px] bg-[#C9A46C] -top-20 -left-40" />
+   314→      <div
+   315→        className="warm-glow w-[500px] h-[500px] bg-[#7A1C1C] -bottom-32 -right-32"
+   316→        style={{ opacity: 0.1 }}
+   317→      />
+   318→      <div className="warm-glow w-[300px] h-[300px] bg-[#C9A46C] top-1/3 right-1/4" />
+   319→
+   320→      <motion.div
+   321→        className="flex flex-col items-center text-center px-4 max-w-4xl mx-auto"
+   322→        variants={staggerContainer}
+   323→        initial="hidden"
+   324→        animate="visible"
+   325→      >
+   326→        {/* Badge */}
+   327→        <motion.div variants={fadeUp} custom={0.2}>
+   328→          <span className="glass-pill inline-flex items-center gap-2 text-xs tracking-wider uppercase text-[#C9A46C]">
+   329→            <Sparkles className="w-3.5 h-3.5" />
+   330→            Powered by AI Waiter
+   331→          </span>
+   332→        </motion.div>
+   333→
+   334→        {/* Heading */}
+   335→        <motion.h1
+   336→          className="mt-6 font-playfair text-4xl sm:text-5xl md:text-7xl font-bold leading-tight"
+   337→          variants={staggerContainer}
+   338→        >
+   339→          <motion.span
+   340→            className="block text-[#F5F0E8]"
+   341→            variants={fadeUp}
+   342→            custom={0.35}
+   343→          >
+   344→            Your Menu That
+   345→          </motion.span>
+   346→          <motion.span
+   347→            className="block gold-text mt-1"
+   348→            variants={fadeUp}
+   349→            custom={0.5}
+   350→          >
+   351→            Sells For You
+   352→          </motion.span>
+   353→        </motion.h1>
+   354→
+   355→        {/* Subtext */}
+   356→        <motion.p
+   357→          className="mt-6 font-inter text-base sm:text-lg text-[#F5F0E8]/60 max-w-xl mx-auto leading-relaxed"
+   358→          variants={fadeUp}
+   359→          custom={0.65}
+   360→        >
+   361→          Not just a menu — an intelligent system that guides, recommends, and
+   362→          increases your restaurant revenue automatically.
+   363→        </motion.p>
+   364→
+   365→        {/* CTA Buttons */}
+   366→        <motion.div
+   367→          className="mt-10 flex flex-col sm:flex-row gap-4 items-center justify-center"
+   368→          variants={fadeUp}
+   369→          custom={0.8}
+   370→        >
+   371→          <motion.button
+   372→            className="bg-[#C9A46C] text-[#0F0F0F] font-semibold px-8 py-3.5 rounded-full flex items-center gap-2 cta-pulse"
+   373→            whileHover={{ scale: 1.05 }}
+   374→            whileTap={{ scale: 0.97 }}
+   375→          >
+   376→            Try Live Menu
+   377→            <ArrowRight className="w-4 h-4" />
+   378→          </motion.button>
+   379→          <motion.button
+   380→            className="glass text-[#F5F0E8] font-medium px-8 py-3.5 rounded-full flex items-center gap-2 hover:border-[#C9A46C]/30 transition-colors duration-300"
+   381→            whileHover={{ scale: 1.05 }}
+   382→            whileTap={{ scale: 0.97 }}
+   383→          >
+   384→            <Play className="w-4 h-4" />
+   385→            Watch Demo
+   386→          </motion.button>
+   387→        </motion.div>
+   388→
+   389→        {/* Social proof */}
+   390→        <motion.div
+   391→          className="mt-12 flex items-center justify-center gap-3"
+   392→          variants={fadeUp}
+   393→          custom={1.0}
+   394→        >
+   395→          <div className="flex -space-x-2">
+   396→            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A46C] to-[#7A1C1C] border-2 border-[#0F0F0F] flex items-center justify-center text-[10px] font-bold text-white">
+   397→              A
+   398→            </div>
+   399→            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7A1C1C] to-[#C9A46C] border-2 border-[#0F0F0F] flex items-center justify-center text-[10px] font-bold text-white">
+   400→              M
+   401→            </div>
+   402→            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A46C] to-[#3a2a1a] border-2 border-[#0F0F0F] flex items-center justify-center text-[10px] font-bold text-white">
+   403→              R
+   404→            </div>
+   405→          </div>
+   406→          <span className="text-sm text-[#F5F0E8]/40 font-inter">
+   407→            Trusted by 2,400+ restaurants
+   408→          </span>
+   409→        </motion.div>
+   410→
+   411→        {/* Scroll hint */}
+   412→        <motion.div
+   413→          className="mt-16 flex flex-col items-center gap-2"
+   414→          initial={{ opacity: 0 }}
+   415→          animate={{ opacity: 1 }}
+   416→          transition={{ delay: 1.5, duration: 0.8 }}
+   417→        >
+   418→          <span className="text-[10px] uppercase tracking-[0.2em] text-[#F5F0E8]/20">
+   419→            Scroll to explore
+   420→          </span>
+   421→          <motion.div
+   422→            className="w-5 h-8 rounded-full border border-[#C9A46C]/20 flex items-start justify-center p-1.5"
+   423→            animate={{ opacity: [0.3, 0.7, 0.3] }}
+   424→            transition={{ duration: 2, repeat: Infinity }}
+   425→          >
+   426→            <motion.div
+   427→              className="w-1 h-1.5 rounded-full bg-[#C9A46C]/60"
+   428→              animate={{ y: [0, 10, 0] }}
+   429→              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+   430→            />
+   431→          </motion.div>
+   432→        </motion.div>
+   433→      </motion.div>
+   434→    </section>
+   435→  );
+   436→}
+   437→
+   438→// ─── Badge Component ──────────────────────────────────────────────────────────
+   439→
+   440→function DishBadge({ badge }: { badge?: string }) {
+   441→  if (!badge) return null;
+   442→
+   443→  const styles: Record<string, string> = {
+   444→    popular: 'bg-[#7A1C1C]/90 text-white',
+   445→    recommended: 'bg-[#C9A46C]/90 text-[#0F0F0F]',
+   446→    new: 'bg-white/10 text-[#F5F0E8]',
+   447→  };
+   448→
+   449→  const labels: Record<string, string> = {
+   450→    popular: '🔥 Popular',
+   451→    recommended: '✨ AI Pick',
+   452→    new: 'New',
+   453→  };
+   454→
+   455→  return (
+   456→    <span
+   457→      className={`absolute top-3 right-3 text-[11px] font-medium px-2.5 py-1 rounded-full ${styles[badge] || styles.new}`}
+   458→    >
+   459→      {labels[badge] || 'New'}
+   460→    </span>
+   461→  );
+   462→}
+   463→
+   464→// ─── 5. MenuPreview ───────────────────────────────────────────────────────────
+   465→
+   466→function MenuPreview() {
+   467→  const { activeDish, setActiveDish, addToCart, setVoiceOpen } =
+   468→    useServioStore();
+   469→
+   470→  return (
+   471→    <section id="menu" className="py-20 relative z-10">
+   472→      <motion.div
+   473→        className="text-center px-4 mb-12"
+   474→        initial="hidden"
+   475→        whileInView="visible"
+   476→        viewport={{ once: true, margin: '-60px' }}
+   477→        variants={staggerContainer}
+   478→      >
+   479→        <motion.span
+   480→          className="glass-pill inline-flex items-center gap-2 text-xs tracking-wider uppercase text-[#C9A46C] mb-4"
+   481→          variants={fadeUp}
+   482→          custom={0}
+   483→        >
+   484→          <Flame className="w-3.5 h-3.5" />
+   485→          Live Preview
+   486→        </motion.span>
+   487→        <motion.h2
+   488→          className="font-playfair text-3xl sm:text-4xl font-bold text-[#F5F0E8] mt-3"
+   489→          variants={fadeUp}
+   490→          custom={0.1}
+   491→        >
+   492→          AI-Curated Experience
+   493→        </motion.h2>
+   494→        <motion.p
+   495→          className="font-inter text-base text-[#F5F0E8]/50 mt-3 max-w-lg mx-auto"
+   496→          variants={fadeUp}
+   497→          custom={0.2}
+   498→        >
+   499→          Each dish is enhanced by AI to maximize appeal and order value
+   500→        </motion.p>
+   501→      </motion.div>
+   502→
+   503→      {/* Horizontal scroll container */}
+   504→      <div className="flex gap-5 overflow-x-auto no-scrollbar px-6 pb-4 scroll-smooth snap-x snap-mandatory">
+   505→        {MENU_ITEMS.map((dish, i) => {
+   506→          const isExpanded = activeDish?.id === dish.id;
+   507→          return (
+   508→            <motion.div
+   509→              key={dish.id}
+   510→              className="relative flex-shrink-0 min-w-[280px] sm:min-w-[320px]"
+   511→              initial="hidden"
+   512→              whileInView="visible"
+   513→              viewport={{ once: true, margin: '-40px' }}
+   514→              custom={i * 0.08}
+   515→              variants={scaleIn}
+   516→            >
+   517→              <motion.div
+   518→                className="glass rounded-2xl overflow-hidden card-glow cursor-pointer group snap-center"
+   519→                whileHover={{ scale: 1.03, y: -4 }}
+   520→                transition={{ duration: 0.35, ease: 'easeOut' }}
+   521→                onClick={() => setActiveDish(dish)}
+   522→              >
+   523→                {/* Image */}
+   524→                <div className="h-48 w-full overflow-hidden relative">
+   525→                  <motion.img
+   526→                    src={dish.image}
+   527→                    alt={dish.name}
+   528→                    className="w-full h-full object-cover"
+   529→                    whileHover={{ scale: 1.1 }}
+   530→                    transition={{ duration: 0.7 }}
+   531→                    loading="lazy"
+   532→                  />
+   533→                  <DishBadge badge={dish.badge} />
+   534→                </div>
+   535→
+   536→                {/* Content */}
+   537→                <div className="p-5">
+   538→                  <h3 className="font-playfair text-lg font-semibold text-[#F5F0E8]">
+   539→                    {dish.name}
+   540→                  </h3>
+   541→                  <p className="text-sm text-[#F5F0E8]/50 line-clamp-2 mt-1 font-inter leading-relaxed">
+   542→                    {dish.description}
+   543→                  </p>
+   544→
+   545→                  <div className="flex items-center justify-between mt-4">
+   546→                    <span className="text-[#C9A46C] font-bold text-xl font-playfair">
+   547→                      ${dish.price}
+   548→                    </span>
+   549→                    <motion.button
+   550→                      className="glass-pill text-xs flex items-center gap-1.5 text-[#C9A46C] cursor-pointer"
+   551→                      whileHover={{ scale: 1.05 }}
+   552→                      whileTap={{ scale: 0.95 }}
+   553→                      onClick={(e) => {
+   554→                        e.stopPropagation();
+   555→                        setActiveDish(dish);
+   556→                        setVoiceOpen(true);
+   557→                      }}
+   558→                    >
+   559→                      <Mic className="w-3 h-3" />
+   560→                      Talk to AI
+   561→                    </motion.button>
+   562→                  </div>
+   563→                </div>
+   564→              </motion.div>
+   565→
+   566→              {/* Expanded action area */}
+   567→              <AnimatePresence>
+   568→                {isExpanded && (
+   569→                  <motion.div
+   570→                    className="mt-3 flex flex-col gap-2"
+   571→                    initial={{ opacity: 0, height: 0 }}
+   572→                    animate={{ opacity: 1, height: 'auto' }}
+   573→                    exit={{ opacity: 0, height: 0 }}
+   574→                    transition={{ duration: 0.35, ease: 'easeOut' }}
+   575→                  >
+   576→                    <motion.button
+   577→                      className="w-full bg-[#C9A46C] text-[#0F0F0F] font-semibold py-3 rounded-xl text-sm"
+   578→                      initial={{ opacity: 0, x: -10 }}
+   579→                      animate={{ opacity: 1, x: 0 }}
+   580→                      transition={{ delay: 0.05 }}
+   581→                      whileTap={{ scale: 0.97 }}
+   582→                      onClick={() => addToCart(dish)}
+   583→                    >
+   584→                      Add to Order — ${dish.price}
+   585→                    </motion.button>
+   586→                    <div className="flex gap-2">
+   587→                      <motion.button
+   588→                        className="flex-1 glass text-[#F5F0E8] py-2.5 rounded-xl text-sm"
+   589→                        initial={{ opacity: 0, x: -10 }}
+   590→                        animate={{ opacity: 1, x: 0 }}
+   591→                        transition={{ delay: 0.1 }}
+   592→                        whileTap={{ scale: 0.97 }}
+   593→                        onClick={() => setActiveDish(dish)}
+   594→                      >
+   595→                        Show Alternatives
+   596→                      </motion.button>
+   597→                      <motion.button
+   598→                        className="flex-1 glass text-[#F5F0E8] py-2.5 rounded-xl text-sm"
+   599→                        initial={{ opacity: 0, x: -10 }}
+   600→                        animate={{ opacity: 1, x: 0 }}
+   601→                        transition={{ delay: 0.15 }}
+   602→                        whileTap={{ scale: 0.97 }}
+   603→                        onClick={() => {
+   604→                          addToCart(dish);
+   605→                        }}
+   606→                      >
+   607→                        Upgrade to Combo
+   608→                      </motion.button>
+   609→                    </div>
+   610→                  </motion.div>
+   611→                )}
+   612→              </AnimatePresence>
+   613→            </motion.div>
+   614→          );
+   615→        })}
+   616→      </div>
+   617→
+   618→      {/* Scroll indicator */}
+   619→      <div className="flex justify-center mt-6 md:hidden">
+   620→        <div className="flex items-center gap-2 text-[#F5F0E8]/20 text-xs font-inter">
+   621→          <ChevronRight className="w-4 h-4 rotate-90" />
+   622→          Swipe to browse
+   623→          <ChevronRight className="w-4 h-4 -rotate-90" />
+   624→        </div>
+   625→      </div>
+   626→    </section>
+   627→  );
+   628→}
+   629→
+   630→// ─── 6. VoiceAIOverlay ────────────────────────────────────────────────────────
+   631→
+   632→function VoiceAIOverlay() {
+   633→  const { voiceOpen, setVoiceOpen, aiState, activeDish, addToCart } =
+   634→    useServioStore();
+   635→
+   636→  const getStatusText = () => {
+   637→    switch (aiState) {
+   638→      case 'listening':
+   639→        return 'Listening...';
+   640→      case 'thinking':
+   641→        return 'Thinking...';
+   642→      case 'speaking':
+   643→        return 'Speaking...';
+   644→      default:
+   645→        return '';
+   646→    }
+   647→  };
+   648→
+   649→  const getStatusIcon = () => {
+   650→    switch (aiState) {
+   651→      case 'listening':
+   652→        return <Mic className="w-5 h-5 text-[#C9A46C]" />;
+   653→      case 'thinking':
+   654→        return (
+   655→          <div className="flex gap-1">
+   656→            {[0, 1, 2].map((i) => (
+   657→              <motion.div
+   658→                key={i}
+   659→                className="w-2 h-2 rounded-full bg-[#C9A46C]"
+   660→                animate={{ opacity: [0.3, 1, 0.3] }}
+   661→                transition={{
+   662→                  duration: 1,
+   663→                  repeat: Infinity,
+   664→                  delay: i * 0.2,
+   665→                }}
+   666→              />
+   667→            ))}
+   668→          </div>
+   669→        );
+   670→      case 'speaking':
+   671→        return <Volume2 className="w-5 h-5 text-[#C9A46C]" />;
+   672→      default:
+   673→        return null;
+   674→    }
+   675→  };
+   676→
+   677→  return (
+   678→    <AnimatePresence>
+   679→      {voiceOpen && (
+   680→        <motion.div
+   681→          className="fixed inset-0 z-[60] glass-strong flex flex-col items-center justify-center"
+   682→          initial={{ opacity: 0 }}
+   683→          animate={{ opacity: 1 }}
+   684→          exit={{ opacity: 0 }}
+   685→          transition={{ duration: 0.4 }}
+   686→        >
+   687→          {/* Close button */}
+   688→          <motion.button
+   689→            className="absolute top-6 right-6 glass rounded-full p-3 flex items-center justify-center cursor-pointer"
+   690→            initial={{ opacity: 0, scale: 0.8 }}
+   691→            animate={{ opacity: 1, scale: 1 }}
+   692→            transition={{ delay: 0.3 }}
+   693→            whileTap={{ scale: 0.9 }}
+   694→            onClick={() => setVoiceOpen(false)}
+   695→          >
+   696→            <X className="w-5 h-5 text-[#F5F0E8]" />
+   697→          </motion.button>
+   698→
+   699→          {/* AI Avatar */}
+   700→          <motion.div
+   701→            className="w-24 h-24 rounded-full bg-gradient-to-br from-[#C9A46C] to-[#7A1C1C] flex items-center justify-center avatar-pulse"
+   702→            initial={{ scale: 0.5, opacity: 0 }}
+   703→            animate={{ scale: 1, opacity: 1 }}
+   704→            transition={{
+   705→              type: 'spring',
+   706→              damping: 20,
+   707→              stiffness: 200,
+   708→              delay: 0.1,
+   709→            }}
+   710→          >
+   711→            <Bot className="w-10 h-10 text-white" />
+   712→          </motion.div>
+   713→
+   714→          {/* Status */}
+   715→          <motion.div
+   716→            className="mt-6 flex items-center gap-2 text-lg font-medium text-[#F5F0E8]"
+   717→            initial={{ opacity: 0, y: 10 }}
+   718→            animate={{ opacity: 1, y: 0 }}
+   719→            transition={{ delay: 0.3 }}
+   720→          >
+   721→            {getStatusIcon()}
+   722→            <span>{getStatusText()}</span>
+   723→          </motion.div>
+   724→
+   725→          {/* Voice waveform */}
+   726→          <div className="mt-8 flex items-center justify-center gap-1 h-10">
+   727→            {Array.from({ length: 12 }).map((_, i) => (
+   728→              <motion.div
+   729→                key={i}
+   730→                className="voice-bar rounded-full"
+   731→                style={{
+   732→                  animationDelay: `${i * 0.08}s`,
+   733→                  height:
+   734→                    aiState === 'speaking' || aiState === 'listening'
+   735→                      ? undefined
+   736→                      : '6px',
+   737→                  animationPlayState:
+   738→                    aiState === 'speaking' || aiState === 'listening'
+   739→                      ? 'running'
+   740→                      : 'paused',
+   741→                  opacity:
+   742→                    aiState === 'idle' || aiState === 'thinking' ? 0.3 : 1,
+   743→                }}
+   744→                animate={
+   745→                  aiState === 'thinking'
+   746→                    ? {
+   747→                        height: [6, 6, 6],
+   748→                      }
+   749→                    : undefined
+   750→                }
+   751→              />
+   752→            ))}
+   753→          </div>
+   754→
+   755→          {/* AI Response */}
+   756→          <AnimatePresence>
+   757→            {aiState === 'speaking' && (
+   758→              <motion.div
+   759→                className="mt-10 max-w-md text-center px-6"
+   760→                initial={{ opacity: 0, y: 20 }}
+   761→                animate={{ opacity: 1, y: 0 }}
+   762→                exit={{ opacity: 0, y: -10 }}
+   763→                transition={{ duration: 0.5, delay: 0.2 }}
+   764→              >
+   765→                <div className="glass rounded-2xl p-6">
+   766→                  <p className="text-[#F5F0E8]/80 font-inter text-sm leading-relaxed">
+   767→                    {activeDish
+   768→                      ? `This ${activeDish.name} is rich and comforting, with a perfect balance of flavor. I recommend adding fresh bread on the side for a complete experience.`
+   769→                      : 'How can I help you today? Ask me about any dish or let me recommend something special.'}
+   770→                  </p>
+   771→                </div>
+   772→              </motion.div>
+   773→            )}
+   774→          </AnimatePresence>
+   775→
+   776→          {/* Suggestion buttons */}
+   777→          <AnimatePresence>
+   778→            {aiState === 'speaking' && (
+   779→              <motion.div
+   780→                className="mt-8 flex flex-col sm:flex-row gap-3 px-6"
+   781→                initial={{ opacity: 0, y: 20 }}
+   782→                animate={{ opacity: 1, y: 0 }}
+   783→                exit={{ opacity: 0, y: 10 }}
+   784→                transition={{ duration: 0.4, delay: 0.6 }}
+   785→              >
+   786→                {activeDish ? (
+   787→                  <>
+   788→                    <motion.button
+   789→                      className="bg-[#C9A46C] text-[#0F0F0F] rounded-full px-6 py-3 font-medium text-sm flex items-center gap-2"
+   790→                      initial={{ opacity: 0, y: 10 }}
+   791→                      animate={{ opacity: 1, y: 0 }}
+   792→                      transition={{ delay: 0.05 }}
+   793→                      whileHover={{ scale: 1.05 }}
+   794→                      whileTap={{ scale: 0.97 }}
+   795→                      onClick={() => {
+   796→                        addToCart(activeDish);
+   797→                        setVoiceOpen(false);
+   798→                      }}
+   799→                    >
+   800→                      <Plus className="w-4 h-4" />
+   801→                      Add to Order
+   802→                    </motion.button>
+   803→                    <motion.button
+   804→                      className="glass rounded-full px-6 py-3 text-[#F5F0E8] text-sm"
+   805→                      initial={{ opacity: 0, y: 10 }}
+   806→                      animate={{ opacity: 1, y: 0 }}
+   807→                      transition={{ delay: 0.1 }}
+   808→                      whileHover={{ scale: 1.05 }}
+   809→                      whileTap={{ scale: 0.97 }}
+   810→                    >
+   811→                      Show Alternatives
+   812→                    </motion.button>
+   813→                    <motion.button
+   814→                      className="glass rounded-full px-6 py-3 text-[#F5F0E8] text-sm"
+   815→                      initial={{ opacity: 0, y: 10 }}
+   816→                      animate={{ opacity: 1, y: 0 }}
+   817→                      transition={{ delay: 0.15 }}
+   818→                      whileHover={{ scale: 1.05 }}
+   819→                      whileTap={{ scale: 0.97 }}
+   820→                    >
+   821→                      Upgrade to Combo
+   822→                    </motion.button>
+   823→                  </>
+   824→                ) : (
+   825→                  <motion.button
+   826→                    className="bg-[#C9A46C] text-[#0F0F0F] rounded-full px-6 py-3 font-medium text-sm flex items-center gap-2"
+   827→                    initial={{ opacity: 0, y: 10 }}
+   828→                    animate={{ opacity: 1, y: 0 }}
+   829→                    transition={{ delay: 0.05 }}
+   830→                    whileHover={{ scale: 1.05 }}
+   831→                    whileTap={{ scale: 0.97 }}
+   832→                  >
+   833→                    <Sparkles className="w-4 h-4" />
+   834→                    Recommend Something
+   835→                  </motion.button>
+   836→                )}
+   837→              </motion.div>
+   838→            )}
+   839→          </AnimatePresence>
+   840→        </motion.div>
+   841→      )}
+   842→    </AnimatePresence>
+   843→  );
+   844→}
+   845→
+   846→// ─── 7. SmartCart ─────────────────────────────────────────────────────────────
+   847→
+   848→function SmartCart() {
+   849→  const {
+   850→    cartItems,
+   851→    cartOpen,
+   852→    setCartOpen,
+   853→    updateQuantity,
+   854→    removeFromCart,
+   855→    cartTotal,
+   856→    cartCount,
+   857→    addToCart,
+   858→  } = useServioStore();
+   859→
+   860→  const total = cartTotal();
+   861→  const count = cartCount();
+   862→
+   863→  return (
+   864→    <AnimatePresence>
+   865→      {cartOpen && (
+   866→        <motion.div
+   867→          className="fixed bottom-0 left-0 right-0 z-50 max-h-[70vh] glass-strong rounded-t-3xl flex flex-col"
+   868→          variants={slideUp}
+   869→          initial="hidden"
+   870→          animate="visible"
+   871→          exit="exit"
+   872→        >
+   873→          {/* Drag handle */}
+   874→          <div className="flex justify-center pt-3 pb-1">
+   875→            <div className="w-10 h-1 bg-[#C9A46C]/30 rounded-full" />
+   876→          </div>
+   877→
+   878→          {/* Header */}
+   879→          <div className="px-6 py-4 flex items-center justify-between">
+   880→            <h3 className="font-playfair text-xl font-bold text-[#F5F0E8]">
+   881→              Your Order
+   882→              {count > 0 && (
+   883→                <span className="text-sm font-inter font-normal text-[#F5F0E8]/40 ml-2">
+   884→                  {count} {count === 1 ? 'item' : 'items'}
+   885→                </span>
+   886→              )}
+   887→            </h3>
+   888→            <motion.button
+   889→              className="p-1 cursor-pointer"
+   890→              whileTap={{ scale: 0.9 }}
+   891→              onClick={() => setCartOpen(false)}
+   892→            >
+   893→              <X className="w-5 h-5 text-[#F5F0E8]/50" />
+   894→            </motion.button>
+   895→          </div>
+   896→
+   897→          {cartItems.length === 0 ? (
+   898→            /* Empty state */
+   899→            <motion.div
+   900→              className="flex-1 flex flex-col items-center justify-center py-12 px-6"
+   901→              initial={{ opacity: 0, scale: 0.9 }}
+   902→              animate={{ opacity: 1, scale: 1 }}
+   903→              transition={{ delay: 0.2 }}
+   904→            >
+   905→              <div className="w-16 h-16 rounded-full glass flex items-center justify-center mb-4">
+   906→                <ShoppingCart className="w-7 h-7 text-[#F5F0E8]/20" />
+   907→              </div>
+   908→              <p className="text-[#F5F0E8]/30 font-inter text-sm">
+   909→                Your cart is empty
+   910→              </p>
+   911→              <p className="text-[#F5F0E8]/15 font-inter text-xs mt-1">
+   912→                Add dishes from the menu to get started
+   913→              </p>
+   914→            </motion.div>
+   915→          ) : (
+   916→            <>
+   917→              {/* Items list */}
+   918→              <div className="flex-1 overflow-y-auto px-6 space-y-4 max-h-[40vh] no-scrollbar">
+   919→                <AnimatePresence mode="popLayout">
+   920→                  {cartItems.map(({ item, quantity }) => (
+   921→                    <motion.div
+   922→                      key={item.id}
+   923→                      className="flex gap-4 items-center"
+   924→                      layout
+   925→                      initial={{ opacity: 0, x: -20 }}
+   926→                      animate={{ opacity: 1, x: 0 }}
+   927→                      exit={{ opacity: 0, x: 20, height: 0, marginBottom: 0 }}
+   928→                      transition={{ duration: 0.3 }}
+   929→                    >
+   930→                      <img
+   931→                        src={item.image}
+   932→                        alt={item.name}
+   933→                        className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
+   934→                      />
+   935→                      <div className="flex-1 min-w-0">
+   936→                        <p className="font-medium text-sm text-[#F5F0E8] truncate">
+   937→                          {item.name}
+   938→                        </p>
+   939→                        <p className="text-[#C9A46C] text-sm font-semibold">
+   940→                          ${item.price * quantity}
+   941→                        </p>
+   942→                      </div>
+   943→                      <div className="flex items-center gap-2">
+   944→                        <motion.button
+   945→                          className="glass rounded-full w-7 h-7 flex items-center justify-center cursor-pointer"
+   946→                          whileTap={{ scale: 0.85 }}
+   947→                          onClick={() =>
+   948→                            updateQuantity(item.id, quantity - 1)
+   949→                          }
+   950→                        >
+   951→                          <Minus className="w-3.5 h-3.5 text-[#F5F0E8]/70" />
+   952→                        </motion.button>
+   953→                        <span className="text-sm font-medium text-[#F5F0E8] w-5 text-center">
+   954→                          {quantity}
+   955→                        </span>
+   956→                        <motion.button
+   957→                          className="glass rounded-full w-7 h-7 flex items-center justify-center cursor-pointer"
+   958→                          whileTap={{ scale: 0.85 }}
+   959→                          onClick={() =>
+   960→                            updateQuantity(item.id, quantity + 1)
+   961→                          }
+   962→                        >
+   963→                          <Plus className="w-3.5 h-3.5 text-[#F5F0E8]/70" />
+   964→                        </motion.button>
+   965→                        <motion.button
+   966→                          className="ml-1 cursor-pointer"
+   967→                          whileTap={{ scale: 0.85 }}
+   968→                          onClick={() => removeFromCart(item.id)}
+   969→                        >
+   970→                          <Trash2 className="w-3.5 h-3.5 text-[#F5F0E8]/30 hover:text-red-400 transition-colors" />
+   971→                        </motion.button>
+   972→                      </div>
+   973→                    </motion.div>
+   974→                  ))}
+   975→                </AnimatePresence>
+   976→              </div>
+   977→
+   978→              {/* AI suggestion */}
+   979→              {total < 50 && (
+   980→                <motion.div
+   981→                  className="mx-6 mt-4 p-4 glass rounded-2xl"
+   982→                  initial={{ opacity: 0, y: 10 }}
+   983→                  animate={{ opacity: 1, y: 0 }}
+   984→                  transition={{ delay: 0.3 }}
+   985→                >
+   986→                  <div className="flex items-center justify-between">
+   987→                    <div className="flex items-center gap-2">
+   988→                      <Bot className="w-4 h-4 text-[#C9A46C]" />
+   989→                      <span className="text-sm text-[#F5F0E8]/50 font-inter">
+   990→                        Most customers add a drink with this 🍷
+   991→                      </span>
+   992→                    </div>
+   993→                    <motion.button
+   994→                      className="text-[#C9A46C] text-sm font-medium cursor-pointer"
+   995→                      whileHover={{ scale: 1.05 }}
+   996→                      whileTap={{ scale: 0.95 }}
+   997→                      onClick={() =>
+   998→                        addToCart({
+   999→                          id: 'drink',
+  1000→                          name: 'House Wine',
+  1001→                          description: 'Curated pairing from our sommelier',
+  1002→                          price: 18,
+  1003→                          image:
+  1004→                            'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=300&fit=crop',
+  1005→                        })
+  1006→                      }
+  1007→                    >
+  1008→                      Add a Drink
+  1009→                    </motion.button>
+  1010→                  </div>
+  1011→                </motion.div>
+  1012→              )}
+  1013→
+  1014→              {/* Footer */}
+  1015→              <div className="px-6 py-4 border-t border-white/5 mt-auto">
+  1016→                <div className="flex justify-between items-center">
+  1017→                  <span className="text-sm text-[#F5F0E8]/50 font-inter">
+  1018→                    Total
+  1019→                  </span>
+  1020→                  <span className="font-playfair text-2xl font-bold gold-text">
+  1021→                    ${total}
+  1022→                  </span>
+  1023→                </div>
+  1024→                <motion.button
+  1025→                  className="w-full bg-[#C9A46C] text-[#0F0F0F] font-semibold py-3.5 rounded-full mt-3 flex items-center justify-center gap-2"
+  1026→                  whileHover={{ scale: 1.02 }}
+  1027→                  whileTap={{ scale: 0.98 }}
+  1028→                >
+  1029→                  Place Order — ${total}
+  1030→                  <ArrowRight className="w-4 h-4" />
+  1031→                </motion.button>
+  1032→              </div>
+  1033→            </>
+  1034→          )}
+  1035→        </motion.div>
+  1036→      )}
+  1037→    </AnimatePresence>
+  1038→  );
+  1039→}
+  1040→
+  1041→// ─── 8. DishDetailOverlay ─────────────────────────────────────────────────────
+  1042→
+  1043→function DishDetailOverlay() {
+  1044→  const { activeDish, setActiveDish, addToCart, setVoiceOpen, voiceOpen } =
+  1045→    useServioStore();
+  1046→
+  1047→  if (!activeDish || voiceOpen) return null;
+  1048→
+  1049→  return (
+  1050→    <AnimatePresence>
+  1051→      <motion.div
+  1052→        className="fixed inset-0 z-[55] flex items-end sm:items-center justify-center"
+  1053→        initial={{ opacity: 0 }}
+  1054→        animate={{ opacity: 1 }}
+  1055→        exit={{ opacity: 0 }}
+  1056→        transition={{ duration: 0.3 }}
+  1057→      >
+  1058→        {/* Backdrop */}
+  1059→        <motion.div
+  1060→          className="absolute inset-0 bg-black/60"
+  1061→          onClick={() => setActiveDish(null)}
+  1062→          initial={{ opacity: 0 }}
+  1063→          animate={{ opacity: 1 }}
+  1064→          exit={{ opacity: 0 }}
+  1065→        />
+  1066→
+  1067→        {/* Content */}
+  1068→        <motion.div
+  1069→          className="relative glass-strong rounded-t-3xl sm:rounded-3xl w-full sm:max-w-md p-6 z-10"
+  1070→          initial={{ y: 60, opacity: 0, scale: 0.95 }}
+  1071→          animate={{ y: 0, opacity: 1, scale: 1 }}
+  1072→          exit={{ y: 60, opacity: 0, scale: 0.95 }}
+  1073→          transition={{
+  1074→            type: 'spring',
+  1075→            damping: 28,
+  1076→            stiffness: 300,
+  1077→          }}
+  1078→        >
+  1079→          {/* Image */}
+  1080→          <div className="relative h-52 w-full rounded-2xl overflow-hidden">
+  1081→            <img
+  1082→              src={activeDish.image}
+  1083→              alt={activeDish.name}
+  1084→              className="w-full h-full object-cover"
+  1085→            />
+  1086→            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+  1087→            <DishBadge badge={activeDish.badge} />
+  1088→          </div>
+  1089→
+  1090→          {/* Name */}
+  1091→          <h3 className="font-playfair text-2xl font-bold text-[#F5F0E8] mt-4">
+  1092→            {activeDish.name}
+  1093→          </h3>
+  1094→
+  1095→          {/* Description */}
+  1096→          <p className="text-sm text-[#F5F0E8]/50 mt-2 leading-relaxed font-inter">
+  1097→            {activeDish.description}
+  1098→          </p>
+  1099→
+  1100→          {/* Price */}
+  1101→          <p className="gold-text font-playfair text-3xl font-bold mt-4">
+  1102→            ${activeDish.price}
+  1103→          </p>
+  1104→
+  1105→          {/* Conversion labels */}
+  1106→          <div className="flex items-center gap-4 mt-3">
+  1107→            {activeDish.badge === 'popular' && (
+  1108→              <span className="flex items-center gap-1.5 text-[#C9A46C] text-xs font-inter">
+  1109→                <Flame className="w-3.5 h-3.5" />
+  1110→                Most Ordered Today
+  1111→              </span>
+  1112→            )}
+  1113→            {activeDish.badge === 'new' && (
+  1114→              <span className="flex items-center gap-1.5 text-red-400 text-xs font-inter">
+  1115→                <Star className="w-3.5 h-3.5" />
+  1116→                Limited Availability
+  1117→              </span>
+  1118→            )}
+  1119→            {activeDish.badge === 'recommended' && (
+  1120→              <span className="flex items-center gap-1.5 text-[#C9A46C] text-xs font-inter">
+  1121→                <TrendingUp className="w-3.5 h-3.5" />
+  1122→                AI Recommended
+  1123→              </span>
+  1124→            )}
+  1125→          </div>
+  1126→
+  1127→          {/* Action buttons */}
+  1128→          <div className="flex flex-col gap-3 mt-6">
+  1129→            <motion.button
+  1130→              className="bg-[#C9A46C] text-[#0F0F0F] font-semibold py-3.5 rounded-full w-full flex items-center justify-center gap-2"
+  1131→              whileHover={{ scale: 1.02 }}
+  1132→              whileTap={{ scale: 0.97 }}
+  1133→              onClick={() => {
+  1134→                addToCart(activeDish);
+  1135→                setActiveDish(null);
+  1136→              }}
+  1137→            >
+  1138→              <Plus className="w-4 h-4" />
+  1139→              Add to Order — ${activeDish.price}
+  1140→            </motion.button>
+  1141→            <motion.button
+  1142→              className="glass flex items-center justify-center gap-2 py-3.5 rounded-full w-full text-[#F5F0E8] font-medium"
+  1143→              whileHover={{ scale: 1.02 }}
+  1144→              whileTap={{ scale: 0.97 }}
+  1145→              onClick={() => {
+  1146→                setActiveDish(activeDish);
+  1147→                setVoiceOpen(true);
+  1148→              }}
+  1149→            >
+  1150→              <Mic className="w-4 h-4 text-[#C9A46C]" />
+  1151→              Ask AI Waiter
+  1152→            </motion.button>
+  1153→          </div>
+  1154→        </motion.div>
+  1155→      </motion.div>
+  1156→    </AnimatePresence>
+  1157→  );
+  1158→}
+  1159→
+  1160→// ─── 9. CartFAB ───────────────────────────────────────────────────────────────
+  1161→
+  1162→function CartFAB() {
+  1163→  const { cartOpen, setCartOpen, cartTotal, cartCount } = useServioStore();
+  1164→  const count = cartCount();
+  1165→
+  1166→  if (cartOpen || count === 0) return null;
+  1167→
+  1168→  return (
+  1169→    <motion.button
+  1170→      className="fixed bottom-6 right-6 z-40 glass-strong rounded-full p-4 flex items-center gap-3 cta-pulse cursor-pointer"
+  1171→      initial={{ scale: 0, opacity: 0 }}
+  1172→      animate={{ scale: 1, opacity: 1 }}
+  1173→      exit={{ scale: 0, opacity: 0 }}
+  1174→      transition={{ type: 'spring', damping: 20, stiffness: 300, delay: 0.1 }}
+  1175→      whileHover={{ scale: 1.08 }}
+  1176→      whileTap={{ scale: 0.95 }}
+  1177→      onClick={() => setCartOpen(true)}
+  1178→    >
+  1179→      <ShoppingCart className="w-5 h-5 text-[#C9A46C]" />
+  1180→      <span className="gold-text font-bold text-sm font-inter">
+  1181→        ${cartTotal()}
+  1182→      </span>
+  1183→      {count > 0 && (
+  1184→        <motion.span
+  1185→          className="absolute -top-1 -right-1 bg-[#7A1C1C] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold"
+  1186→          initial={{ scale: 0 }}
+  1187→          animate={{ scale: 1 }}
+  1188→          transition={{ type: 'spring', damping: 15, stiffness: 300 }}
+  1189→        >
+  1190→          {count}
+  1191→        </motion.span>
+  1192→      )}
+  1193→    </motion.button>
+  1194→  );
+  1195→}
+  1196→
+  1197→// ─── 10. Main Export ──────────────────────────────────────────────────────────
+  1198→
+  1199→export default function ServioLanding() {
+  1200→  return (
+  1201→    <div
+  1202→      className="relative min-h-screen grain-overlay vignette"
+  1203→      style={{ background: '#0F0F0F' }}
+  1204→    >
+  1205→      <BackgroundLayer />
+  1206→      <Particles />
+  1207→      <Navigation />
+  1208→
+  1209→      <main className="relative z-10">
+  1210→        <HeroSection />
+  1211→        <MenuPreview />
+  1212→      </main>
+  1213→
+  1214→      <DishDetailOverlay />
+  1215→      <VoiceAIOverlay />
+  1216→      <SmartCart />
+  1217→      <CartFAB />
+  1218→    </div>
+  1219→  );
+  1220→}
