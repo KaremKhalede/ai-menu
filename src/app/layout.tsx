@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Playfair_Display, Inter } from "next/font/google";
+import { Playfair_Display, Tajawal } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -10,17 +10,17 @@ const playfair = Playfair_Display({
   display: "swap",
 });
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+const tajawal = Tajawal({
+  variable: "--font-tajawal",
+  subsets: ["arabic"],
+  weight: ["200", "300", "400", "500", "700", "800", "900"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Servio AI — Your Menu That Sells For You",
+  title: "Servio AI — منيوك الذكي يبيع لك",
   description:
-    "An intelligent menu system that guides, recommends, and increases your restaurant revenue automatically using Voice AI.",
+    "نظام المنيو الذكي بالذكاء الاصطناعي الذي يوجه ويوصي ويزيد إيرادات مطعمك تلقائياً",
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
@@ -39,10 +39,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" dir="ltr" suppressHydrationWarning>
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
       <body
-        className={`${playfair.variable} ${inter.variable} antialiased`}
-        style={{ fontFamily: "var(--font-inter)", background: "#0F0F0F", color: "#F5F0E8" }}
+        className={`${playfair.variable} ${tajawal.variable} antialiased`}
+        style={{ fontFamily: "var(--font-tajawal)", background: "#0F0F0F", color: "#F5F0E8" }}
       >
         {children}
         <Toaster />

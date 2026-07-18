@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Menu,
@@ -14,77 +14,20 @@ import {
   Plus,
   Minus,
   Trash2,
-  ArrowRight,
+  ArrowLeft,
   Play,
   Volume2,
   Bot,
   Flame,
+  CheckCircle2,
 } from 'lucide-react';
-import { useServioStore, type MenuItem } from '@/lib/servio-store';
-
-// ─── Demo Menu Data ───────────────────────────────────────────────────────────
-
-const MENU_ITEMS: MenuItem[] = [
-  {
-    id: '1',
-    name: 'Truffle Risotto',
-    description:
-      'Creamy arborio rice with black truffle shavings, aged parmesan, and a drizzle of truffle oil. A rich, earthy masterpiece.',
-    price: 42,
-    image:
-      'https://images.unsplash.com/photo-1476124369491-e7addf5db371?w=400&h=300&fit=crop',
-    badge: 'popular' as const,
-  },
-  {
-    id: '2',
-    name: 'Wagyu Tataki',
-    description:
-      'Lightly seared A5 wagyu with ponzu glaze, microgreens, and toasted sesame. Melt-in-your-mouth perfection.',
-    price: 68,
-    image:
-      'https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=300&fit=crop',
-    badge: 'recommended' as const,
-  },
-  {
-    id: '3',
-    name: 'Lobster Thermidor',
-    description:
-      'Whole Maine lobster in a rich brandy cream sauce, gratinated with gruyère. The ultimate indulgence.',
-    price: 78,
-    image:
-      'https://images.unsplash.com/photo-1553621042-f6e147245754?w=400&h=300&fit=crop',
-    badge: 'popular' as const,
-  },
-  {
-    id: '4',
-    name: 'Saffron Paella',
-    description:
-      'Traditional Valencian paella with saffron-infused rice, fresh seafood, and crispy socarrat bottom.',
-    price: 55,
-    image:
-      'https://images.unsplash.com/photo-1534080564583-6be75777b70a?w=400&h=300&fit=crop',
-  },
-  {
-    id: '5',
-    name: 'Black Cod Miso',
-    description:
-      'Marinated 72 hours in white miso, then caramelized to perfection. Served with pickled ginger and edamame.',
-    price: 58,
-    image:
-      'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=400&h=300&fit=crop',
-    badge: 'new' as const,
-  },
-  {
-    id: '6',
-    name: 'Chocolate Soufflé',
-    description:
-      'Light, airy, and intensely chocolatey. Served with vanilla crème anglaise and gold leaf.',
-    price: 28,
-    image:
-      'https://images.unsplash.com/photo-1541783245831-57d6fb0926d3?w=400&h=300&fit=crop',
-    badge: 'recommended' as const,
-  },
-];
+import {
+  useServioStore,
+  type Category,
+  type MenuItem,
+  type AIState,
+  getBadge,
+} from '@/lib/servio-store';
 
 // ─── Animation Variants ──────────────────────────────────────────────────────
 
@@ -205,7 +148,11 @@ function BackgroundLayer() {
 function Navigation() {
   const { mobileMenuOpen, setMobileMenuOpen } = useServioStore();
 
-  const navLinks = ['Menu', 'AI Insights', 'Pricing'];
+  const navLinks = [
+    { label: 'القائمة', href: '#القائمة' },
+    { label: 'رؤى الذكاء', href: '#رؤى-الذكاء' },
+    { label: 'الأسعار', href: '#الأسعار' },
+  ];
 
   return (
     <>
@@ -230,11 +177,11 @@ function Navigation() {
             <div className="glass-pill flex items-center gap-6">
               {navLinks.map((link) => (
                 <a
-                  key={link}
-                  href={`#${link.toLowerCase().replace(' ', '-')}`}
+                  key={link.label}
+                  href={link.href}
                   className="text-sm text-[#F5F0E8]/70 hover:text-[#C9A46C] transition-colors duration-300 cursor-pointer"
                 >
-                  {link}
+                  {link.label}
                 </a>
               ))}
             </div>
@@ -243,13 +190,13 @@ function Navigation() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.97 }}
             >
-              Start Free
+              ابدأ مجاناً
             </motion.button>
           </div>
 
           {/* Mobile hamburger */}
           <motion.button
-            className="md:hidden glass rounded-full p-2.5 flex items-center justify-center"
+            className="md:hidden glass rounded-full p-2.5 flex items-center justify-center cursor-pointer"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             whileTap={{ scale: 0.9 }}
           >
@@ -274,8 +221,8 @@ function Navigation() {
           >
             {navLinks.map((link, i) => (
               <motion.a
-                key={link}
-                href={`#${link.toLowerCase().replace(' ', '-')}`}
+                key={link.label}
+                href={link.href}
                 className="text-2xl font-playfair font-semibold text-[#F5F0E8] hover:text-[#C9A46C] transition-colors duration-300"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -283,7 +230,7 @@ function Navigation() {
                 transition={{ delay: i * 0.1, duration: 0.4 }}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                {link}
+                {link.label}
               </motion.a>
             ))}
             <motion.button
@@ -295,7 +242,7 @@ function Navigation() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              Start Free
+              ابدأ مجاناً
             </motion.button>
           </motion.div>
         )}
@@ -307,15 +254,21 @@ function Navigation() {
 // ─── 4. HeroSection ───────────────────────────────────────────────────────────
 
 function HeroSection() {
+  const { fetchMenu } = useServioStore();
+
+  useEffect(() => {
+    fetchMenu();
+  }, [fetchMenu]);
+
   return (
     <section className="relative z-10 min-h-screen flex items-center justify-center overflow-hidden">
       {/* Warm glow spots */}
-      <div className="warm-glow w-[400px] h-[400px] bg-[#C9A46C] -top-20 -left-40" />
+      <div className="warm-glow w-[400px] h-[400px] bg-[#C9A46C] -top-20 -right-40" />
       <div
-        className="warm-glow w-[500px] h-[500px] bg-[#7A1C1C] -bottom-32 -right-32"
+        className="warm-glow w-[500px] h-[500px] bg-[#7A1C1C] -bottom-32 -left-32"
         style={{ opacity: 0.1 }}
       />
-      <div className="warm-glow w-[300px] h-[300px] bg-[#C9A46C] top-1/3 right-1/4" />
+      <div className="warm-glow w-[300px] h-[300px] bg-[#C9A46C] top-1/3 left-1/4" />
 
       <motion.div
         className="flex flex-col items-center text-center px-4 max-w-4xl mx-auto"
@@ -327,7 +280,7 @@ function HeroSection() {
         <motion.div variants={fadeUp} custom={0.2}>
           <span className="glass-pill inline-flex items-center gap-2 text-xs tracking-wider uppercase text-[#C9A46C]">
             <Sparkles className="w-3.5 h-3.5" />
-            Powered by AI Waiter
+            مدعوم بالنادل الذكي
           </span>
         </motion.div>
 
@@ -341,25 +294,24 @@ function HeroSection() {
             variants={fadeUp}
             custom={0.35}
           >
-            Your Menu That
+            منيوك الذكي
           </motion.span>
           <motion.span
             className="block gold-text mt-1"
             variants={fadeUp}
             custom={0.5}
           >
-            Sells For You
+            اللي يبيع لك
           </motion.span>
         </motion.h1>
 
         {/* Subtext */}
         <motion.p
-          className="mt-6 font-inter text-base sm:text-lg text-[#F5F0E8]/60 max-w-xl mx-auto leading-relaxed"
+          className="mt-6 text-base sm:text-lg text-[#F5F0E8]/60 max-w-xl mx-auto leading-relaxed"
           variants={fadeUp}
           custom={0.65}
         >
-          Not just a menu — an intelligent system that guides, recommends, and
-          increases your restaurant revenue automatically.
+          ليس مجرد منيو — نظام ذكي يوجّه ويوصي ويزيد إيرادات مطعمك تلقائياً.
         </motion.p>
 
         {/* CTA Buttons */}
@@ -369,20 +321,23 @@ function HeroSection() {
           custom={0.8}
         >
           <motion.button
-            className="bg-[#C9A46C] text-[#0F0F0F] font-semibold px-8 py-3.5 rounded-full flex items-center gap-2 cta-pulse"
+            className="bg-[#C9A46C] text-[#0F0F0F] font-semibold px-8 py-3.5 rounded-full flex items-center gap-2 cta-pulse cursor-pointer"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.97 }}
+            onClick={() => {
+              document.getElementById('القائمة')?.scrollIntoView({ behavior: 'smooth' });
+            }}
           >
-            Try Live Menu
-            <ArrowRight className="w-4 h-4" />
+            جرب القائمة الحية
+            <ArrowLeft className="w-4 h-4" />
           </motion.button>
           <motion.button
-            className="glass text-[#F5F0E8] font-medium px-8 py-3.5 rounded-full flex items-center gap-2 hover:border-[#C9A46C]/30 transition-colors duration-300"
+            className="glass text-[#F5F0E8] font-medium px-8 py-3.5 rounded-full flex items-center gap-2 hover:border-[#C9A46C]/30 transition-colors duration-300 cursor-pointer"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.97 }}
           >
             <Play className="w-4 h-4" />
-            Watch Demo
+            شاهد العرض
           </motion.button>
         </motion.div>
 
@@ -394,17 +349,17 @@ function HeroSection() {
         >
           <div className="flex -space-x-2">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A46C] to-[#7A1C1C] border-2 border-[#0F0F0F] flex items-center justify-center text-[10px] font-bold text-white">
-              A
+              أ
             </div>
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7A1C1C] to-[#C9A46C] border-2 border-[#0F0F0F] flex items-center justify-center text-[10px] font-bold text-white">
-              M
+              م
             </div>
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A46C] to-[#3a2a1a] border-2 border-[#0F0F0F] flex items-center justify-center text-[10px] font-bold text-white">
-              R
+              ر
             </div>
           </div>
-          <span className="text-sm text-[#F5F0E8]/40 font-inter">
-            Trusted by 2,400+ restaurants
+          <span className="text-sm text-[#F5F0E8]/40">
+            موثوق من قبل 2,400+ مطعم
           </span>
         </motion.div>
 
@@ -416,7 +371,7 @@ function HeroSection() {
           transition={{ delay: 1.5, duration: 0.8 }}
         >
           <span className="text-[10px] uppercase tracking-[0.2em] text-[#F5F0E8]/20">
-            Scroll to explore
+            اسحب لاكتشاف المزيد
           </span>
           <motion.div
             className="w-5 h-8 rounded-full border border-[#C9A46C]/20 flex items-start justify-center p-1.5"
@@ -437,8 +392,24 @@ function HeroSection() {
 
 // ─── Badge Component ──────────────────────────────────────────────────────────
 
-function DishBadge({ badge }: { badge?: string }) {
-  if (!badge) return null;
+function DishBadge({
+  badge,
+  tags,
+  isFeatured,
+  orderCount,
+}: {
+  badge?: 'popular' | 'recommended' | 'new' | undefined;
+  tags?: string[];
+  isFeatured?: boolean;
+  orderCount?: number;
+}) {
+  // Determine which label to show
+  let displayBadge = badge;
+  if (!displayBadge && tags && isFeatured !== undefined && orderCount !== undefined) {
+    displayBadge = getBadge(tags, isFeatured, orderCount);
+  }
+
+  if (!displayBadge) return null;
 
   const styles: Record<string, string> = {
     popular: 'bg-[#7A1C1C]/90 text-white',
@@ -447,28 +418,99 @@ function DishBadge({ badge }: { badge?: string }) {
   };
 
   const labels: Record<string, string> = {
-    popular: '🔥 Popular',
-    recommended: '✨ AI Pick',
-    new: 'New',
+    popular: '🔥 الأكثر طلباً',
+    recommended: '✨ اختيار الشيف',
+    new: 'جديد',
   };
 
   return (
     <span
-      className={`absolute top-3 right-3 text-[11px] font-medium px-2.5 py-1 rounded-full ${styles[badge] || styles.new}`}
+      className={`absolute top-3 left-3 text-[11px] font-medium px-2.5 py-1 rounded-full z-10 ${styles[displayBadge] || styles.new}`}
     >
-      {labels[badge] || 'New'}
+      {labels[displayBadge] || 'جديد'}
     </span>
   );
 }
 
-// ─── 5. MenuPreview ───────────────────────────────────────────────────────────
+// ─── 5. CategoryTabs ──────────────────────────────────────────────────────────
 
-function MenuPreview() {
-  const { activeDish, setActiveDish, addToCart, setVoiceOpen } =
-    useServioStore();
+function CategoryTabs() {
+  const { categories, activeCategory, setActiveCategory } = useServioStore();
+
+  if (categories.length === 0) return null;
 
   return (
-    <section id="menu" className="py-20 relative z-10">
+    <motion.div
+      className="relative z-10 px-6 pt-4 pb-2"
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: '-40px' }}
+      variants={staggerContainer}
+    >
+      <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 scroll-smooth">
+        {/* "All" pill */}
+        <motion.button
+          className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-medium flex items-center gap-2 transition-colors duration-300 cursor-pointer ${
+            activeCategory === null
+              ? 'bg-[#C9A46C] text-[#0F0F0F]'
+              : 'glass-pill text-[#F5F0E8]/60 hover:text-[#C9A46C]'
+          }`}
+          layout
+          variants={scaleIn}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setActiveCategory(null)}
+        >
+          <Menu className="w-4 h-4" />
+          الكل
+        </motion.button>
+
+        {/* Category pills */}
+        {categories.map((cat) => (
+          <motion.button
+            key={cat.id}
+            className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-medium flex items-center gap-2 transition-colors duration-300 cursor-pointer ${
+              activeCategory === cat.id
+                ? 'bg-[#C9A46C] text-[#0F0F0F]'
+                : 'glass-pill text-[#F5F0E8]/60 hover:text-[#C9A46C]'
+            }`}
+            layout
+            variants={scaleIn}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setActiveCategory(cat.id)}
+          >
+            {cat.icon && <span>{cat.icon}</span>}
+            {cat.name}
+          </motion.button>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── 6. MenuPreview ───────────────────────────────────────────────────────────
+
+function MenuPreview() {
+  const {
+    categories,
+    activeCategory,
+    activeDish,
+    setActiveDish,
+    addToCart,
+    setVoiceOpen,
+    menuLoading,
+    menuLoaded,
+  } = useServioStore();
+
+  const allDishes = categories.flatMap((c) => c.dishes);
+  const filteredDishes = activeCategory
+    ? categories.find((c) => c.id === activeCategory)?.dishes || []
+    : allDishes;
+
+  return (
+    <section id="القائمة" className="py-20 relative z-10">
+      {/* Section header */}
       <motion.div
         className="text-center px-4 mb-12"
         initial="hidden"
@@ -482,165 +524,226 @@ function MenuPreview() {
           custom={0}
         >
           <Flame className="w-3.5 h-3.5" />
-          Live Preview
+          معاينة مباشرة
         </motion.span>
         <motion.h2
           className="font-playfair text-3xl sm:text-4xl font-bold text-[#F5F0E8] mt-3"
           variants={fadeUp}
           custom={0.1}
         >
-          AI-Curated Experience
+          تجربة منسّقة بالذكاء الاصطناعي
         </motion.h2>
         <motion.p
-          className="font-inter text-base text-[#F5F0E8]/50 mt-3 max-w-lg mx-auto"
+          className="text-base text-[#F5F0E8]/50 mt-3 max-w-lg mx-auto"
           variants={fadeUp}
           custom={0.2}
         >
-          Each dish is enhanced by AI to maximize appeal and order value
+          كل طبق محسّن بالذكاء الاصطناعي لزيادة الجاذبية وقيمة الطلب
         </motion.p>
       </motion.div>
 
-      {/* Horizontal scroll container */}
-      <div className="flex gap-5 overflow-x-auto no-scrollbar px-6 pb-4 scroll-smooth snap-x snap-mandatory">
-        {MENU_ITEMS.map((dish, i) => {
-          const isExpanded = activeDish?.id === dish.id;
-          return (
+      {/* Loading skeletons */}
+      {menuLoading && (
+        <div className="flex gap-5 overflow-x-auto no-scrollbar px-6 pb-4">
+          {Array.from({ length: 3 }).map((_, i) => (
             <motion.div
-              key={dish.id}
+              key={`skeleton-${i}`}
               className="relative flex-shrink-0 min-w-[280px] sm:min-w-[320px]"
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: '-40px' }}
-              custom={i * 0.08}
-              variants={scaleIn}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: i * 0.15 }}
             >
-              <motion.div
-                className="glass rounded-2xl overflow-hidden card-glow cursor-pointer group snap-center"
-                whileHover={{ scale: 1.03, y: -4 }}
-                transition={{ duration: 0.35, ease: 'easeOut' }}
-                onClick={() => setActiveDish(dish)}
-              >
-                {/* Image */}
-                <div className="h-48 w-full overflow-hidden relative">
-                  <motion.img
-                    src={dish.image}
-                    alt={dish.name}
-                    className="w-full h-full object-cover"
-                    whileHover={{ scale: 1.1 }}
-                    transition={{ duration: 0.7 }}
-                    loading="lazy"
-                  />
-                  <DishBadge badge={dish.badge} />
-                </div>
-
-                {/* Content */}
-                <div className="p-5">
-                  <h3 className="font-playfair text-lg font-semibold text-[#F5F0E8]">
-                    {dish.name}
-                  </h3>
-                  <p className="text-sm text-[#F5F0E8]/50 line-clamp-2 mt-1 font-inter leading-relaxed">
-                    {dish.description}
-                  </p>
-
+              <div className="glass rounded-2xl overflow-hidden">
+                <div className="h-48 w-full bg-white/5 animate-pulse" />
+                <div className="p-5 space-y-3">
+                  <div className="h-5 w-3/4 bg-white/5 rounded animate-pulse" />
+                  <div className="h-4 w-full bg-white/5 rounded animate-pulse" />
+                  <div className="h-4 w-2/3 bg-white/5 rounded animate-pulse" />
                   <div className="flex items-center justify-between mt-4">
-                    <span className="text-[#C9A46C] font-bold text-xl font-playfair">
-                      ${dish.price}
-                    </span>
-                    <motion.button
-                      className="glass-pill text-xs flex items-center gap-1.5 text-[#C9A46C] cursor-pointer"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveDish(dish);
-                        setVoiceOpen(true);
-                      }}
-                    >
-                      <Mic className="w-3 h-3" />
-                      Talk to AI
-                    </motion.button>
+                    <div className="h-6 w-16 bg-white/5 rounded animate-pulse" />
+                    <div className="h-8 w-24 bg-white/5 rounded-full animate-pulse" />
                   </div>
                 </div>
-              </motion.div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
 
-              {/* Expanded action area */}
-              <AnimatePresence>
-                {isExpanded && (
+      {/* Dish cards */}
+      {!menuLoading && filteredDishes.length > 0 && (
+        <div className="flex gap-5 overflow-x-auto no-scrollbar px-6 pb-4 scroll-smooth snap-x snap-mandatory">
+          <AnimatePresence mode="popLayout">
+            {filteredDishes.map((dish, i) => {
+              const badge = getBadge(dish.tags, dish.isFeatured, dish.orderCount);
+              const isExpanded = activeDish?.id === dish.id;
+
+
+
+              return (
+                <motion.div
+                  key={dish.id}
+                  className="relative flex-shrink-0 min-w-[280px] sm:min-w-[320px]"
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, margin: '-40px' }}
+                  custom={i * 0.08}
+                  variants={scaleIn}
+                  layout
+                >
                   <motion.div
-                    className="mt-3 flex flex-col gap-2"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
+                    className="glass rounded-2xl overflow-hidden card-glow cursor-pointer group snap-center"
+                    whileHover={{ scale: 1.03, y: -4 }}
                     transition={{ duration: 0.35, ease: 'easeOut' }}
+                    onClick={() => setActiveDish(dish)}
                   >
-                    <motion.button
-                      className="w-full bg-[#C9A46C] text-[#0F0F0F] font-semibold py-3 rounded-xl text-sm"
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.05 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => addToCart(dish)}
-                    >
-                      Add to Order — ${dish.price}
-                    </motion.button>
-                    <div className="flex gap-2">
-                      <motion.button
-                        className="flex-1 glass text-[#F5F0E8] py-2.5 rounded-xl text-sm"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.1 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => setActiveDish(dish)}
-                      >
-                        Show Alternatives
-                      </motion.button>
-                      <motion.button
-                        className="flex-1 glass text-[#F5F0E8] py-2.5 rounded-xl text-sm"
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.15 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => {
-                          addToCart(dish);
-                        }}
-                      >
-                        Upgrade to Combo
-                      </motion.button>
+                    {/* Image */}
+                    <div className="h-48 w-full overflow-hidden relative">
+                      <motion.img
+                        src={dish.image}
+                        alt={dish.name}
+                        className="w-full h-full object-cover"
+                        whileHover={{ scale: 1.1 }}
+                        transition={{ duration: 0.7 }}
+                        loading="lazy"
+                      />
+                      <DishBadge badge={badge} />
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-5">
+                      <h3 className="font-playfair text-lg font-semibold text-[#F5F0E8]">
+                        {dish.name}
+                      </h3>
+                      <p className="text-sm text-[#F5F0E8]/50 line-clamp-2 mt-1 leading-relaxed">
+                        {dish.description}
+                      </p>
+
+                      {/* Rating + Order count */}
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="flex items-center gap-1 text-[#C9A46C] text-xs">
+                          <Star className="w-3 h-3 fill-[#C9A46C]" />
+                          {dish.rating}
+                        </span>
+                        {dish.orderCount > 0 && (
+                          <span className="text-[10px] text-[#F5F0E8]/25">
+                            طُلب {dish.orderCount} مرة
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between mt-3">
+                        <span className="text-[#C9A46C] font-bold text-xl font-playfair">
+                          {dish.price} ر.س
+                        </span>
+                        <motion.button
+                          className="glass-pill text-xs flex items-center gap-1.5 text-[#C9A46C] cursor-pointer"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveDish(dish);
+                            setVoiceOpen(true);
+                          }}
+                        >
+                          <Mic className="w-3 h-3" />
+                          تحدث مع الذكاء
+                        </motion.button>
+                      </div>
                     </div>
                   </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          );
-        })}
-      </div>
+
+                  {/* Expanded action area */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        className="mt-3 flex flex-col gap-2"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.35, ease: 'easeOut' }}
+                      >
+                        <motion.button
+                          className="w-full bg-[#C9A46C] text-[#0F0F0F] font-semibold py-3 rounded-xl text-sm cursor-pointer"
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.05 }}
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => addToCart(dish)}
+                        >
+                          أضف للطلب — {dish.price} ر.س
+                        </motion.button>
+                        <div className="flex gap-2">
+                          <motion.button
+                            className="flex-1 glass text-[#F5F0E8] py-2.5 rounded-xl text-sm cursor-pointer"
+                            initial={{ opacity: 0, x: 10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.1 }}
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => setActiveDish(dish)}
+                          >
+                            عرض بدائل
+                          </motion.button>
+                          <motion.button
+                            className="flex-1 glass text-[#F5F0E8] py-2.5 rounded-xl text-sm cursor-pointer"
+                            initial={{ opacity: 0, x: 10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.15 }}
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => addToCart(dish)}
+                          >
+                            ترقية لكمبو
+                          </motion.button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Loaded but no dishes */}
+      {!menuLoading && menuLoaded && filteredDishes.length === 0 && (
+        <motion.div
+          className="text-center py-16 px-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <p className="text-[#F5F0E8]/30 text-sm">لا توجد أصناف في هذه الفئة حالياً</p>
+        </motion.div>
+      )}
 
       {/* Scroll indicator */}
-      <div className="flex justify-center mt-6 md:hidden">
-        <div className="flex items-center gap-2 text-[#F5F0E8]/20 text-xs font-inter">
-          <ChevronRight className="w-4 h-4 rotate-90" />
-          Swipe to browse
-          <ChevronRight className="w-4 h-4 -rotate-90" />
+      {filteredDishes.length > 0 && (
+        <div className="flex justify-center mt-6 md:hidden">
+          <div className="flex items-center gap-2 text-[#F5F0E8]/20 text-xs">
+            <ChevronRight className="w-4 h-4 rotate-90" />
+            اسحب للتصفح
+            <ChevronRight className="w-4 h-4 -rotate-90" />
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }
 
-// ─── 6. VoiceAIOverlay ────────────────────────────────────────────────────────
+// ─── 7. VoiceAIOverlay ────────────────────────────────────────────────────────
 
 function VoiceAIOverlay() {
   const { voiceOpen, setVoiceOpen, aiState, activeDish, addToCart } =
     useServioStore();
 
-  const getStatusText = () => {
+  const getStatusText = (): string => {
     switch (aiState) {
       case 'listening':
-        return 'Listening...';
+        return 'يستمع...';
       case 'thinking':
-        return 'Thinking...';
+        return 'يفكّر...';
       case 'speaking':
-        return 'Speaking...';
+        return 'يتحدث...';
       default:
         return '';
     }
@@ -686,7 +789,7 @@ function VoiceAIOverlay() {
         >
           {/* Close button */}
           <motion.button
-            className="absolute top-6 right-6 glass rounded-full p-3 flex items-center justify-center cursor-pointer"
+            className="absolute top-6 left-6 glass rounded-full p-3 flex items-center justify-center cursor-pointer"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
@@ -763,10 +866,10 @@ function VoiceAIOverlay() {
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
                 <div className="glass rounded-2xl p-6">
-                  <p className="text-[#F5F0E8]/80 font-inter text-sm leading-relaxed">
+                  <p className="text-[#F5F0E8]/80 text-sm leading-relaxed">
                     {activeDish
-                      ? `This ${activeDish.name} is rich and comforting, with a perfect balance of flavor. I recommend adding fresh bread on the side for a complete experience.`
-                      : 'How can I help you today? Ask me about any dish or let me recommend something special.'}
+                      ? `هذا ${activeDish.name} غني ومريح، بتوازن مثالي للنكهات. أنصحك بإضافة خبز طازج جانبي لتجربة كاملة.`
+                      : 'كيف أقدر أساعدك اليوم؟ اسألني عن أي طبق أو دعني أرشح لك شي مميز.'}
                   </p>
                 </div>
               </motion.div>
@@ -786,7 +889,7 @@ function VoiceAIOverlay() {
                 {activeDish ? (
                   <>
                     <motion.button
-                      className="bg-[#C9A46C] text-[#0F0F0F] rounded-full px-6 py-3 font-medium text-sm flex items-center gap-2"
+                      className="bg-[#C9A46C] text-[#0F0F0F] rounded-full px-6 py-3 font-medium text-sm flex items-center gap-2 cursor-pointer"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.05 }}
@@ -798,32 +901,32 @@ function VoiceAIOverlay() {
                       }}
                     >
                       <Plus className="w-4 h-4" />
-                      Add to Order
+                      أضف للطلب
                     </motion.button>
                     <motion.button
-                      className="glass rounded-full px-6 py-3 text-[#F5F0E8] text-sm"
+                      className="glass rounded-full px-6 py-3 text-[#F5F0E8] text-sm cursor-pointer"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.1 }}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.97 }}
                     >
-                      Show Alternatives
+                      عرض بدائل
                     </motion.button>
                     <motion.button
-                      className="glass rounded-full px-6 py-3 text-[#F5F0E8] text-sm"
+                      className="glass rounded-full px-6 py-3 text-[#F5F0E8] text-sm cursor-pointer"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.15 }}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.97 }}
                     >
-                      Upgrade to Combo
+                      ترقية لكمبو
                     </motion.button>
                   </>
                 ) : (
                   <motion.button
-                    className="bg-[#C9A46C] text-[#0F0F0F] rounded-full px-6 py-3 font-medium text-sm flex items-center gap-2"
+                    className="bg-[#C9A46C] text-[#0F0F0F] rounded-full px-6 py-3 font-medium text-sm flex items-center gap-2 cursor-pointer"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.05 }}
@@ -831,7 +934,7 @@ function VoiceAIOverlay() {
                     whileTap={{ scale: 0.97 }}
                   >
                     <Sparkles className="w-4 h-4" />
-                    Recommend Something
+                    رشّح لي شي
                   </motion.button>
                 )}
               </motion.div>
@@ -843,7 +946,7 @@ function VoiceAIOverlay() {
   );
 }
 
-// ─── 7. SmartCart ─────────────────────────────────────────────────────────────
+// ─── 8. SmartCart ─────────────────────────────────────────────────────────────
 
 function SmartCart() {
   const {
@@ -855,10 +958,19 @@ function SmartCart() {
     cartTotal,
     cartCount,
     addToCart,
+    categories,
+    placeOrder,
+    orderPlacing,
   } = useServioStore();
 
   const total = cartTotal();
   const count = cartCount();
+
+  // Find first drink from مشروبات ساخنة for upsell
+  const drinkCategory = categories.find(
+    (c) => c.name === 'مشروبات ساخنة'
+  );
+  const firstDrink = drinkCategory?.dishes[0] || null;
 
   return (
     <AnimatePresence>
@@ -878,10 +990,10 @@ function SmartCart() {
           {/* Header */}
           <div className="px-6 py-4 flex items-center justify-between">
             <h3 className="font-playfair text-xl font-bold text-[#F5F0E8]">
-              Your Order
+              طلبك
               {count > 0 && (
-                <span className="text-sm font-inter font-normal text-[#F5F0E8]/40 ml-2">
-                  {count} {count === 1 ? 'item' : 'items'}
+                <span className="text-sm font-normal text-[#F5F0E8]/40 mr-2">
+                  {count} أصناف
                 </span>
               )}
             </h3>
@@ -905,11 +1017,11 @@ function SmartCart() {
               <div className="w-16 h-16 rounded-full glass flex items-center justify-center mb-4">
                 <ShoppingCart className="w-7 h-7 text-[#F5F0E8]/20" />
               </div>
-              <p className="text-[#F5F0E8]/30 font-inter text-sm">
-                Your cart is empty
+              <p className="text-[#F5F0E8]/30 text-sm">
+                سلتك فارغة
               </p>
-              <p className="text-[#F5F0E8]/15 font-inter text-xs mt-1">
-                Add dishes from the menu to get started
+              <p className="text-[#F5F0E8]/15 text-xs mt-1">
+                أضف أصناف من القائمة للبدء
               </p>
             </motion.div>
           ) : (
@@ -922,9 +1034,9 @@ function SmartCart() {
                       key={item.id}
                       className="flex gap-4 items-center"
                       layout
-                      initial={{ opacity: 0, x: -20 }}
+                      initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20, height: 0, marginBottom: 0 }}
+                      exit={{ opacity: 0, x: -20, height: 0, marginBottom: 0 }}
                       transition={{ duration: 0.3 }}
                     >
                       <img
@@ -937,7 +1049,7 @@ function SmartCart() {
                           {item.name}
                         </p>
                         <p className="text-[#C9A46C] text-sm font-semibold">
-                          ${item.price * quantity}
+                          {item.price * quantity} ر.س
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -963,7 +1075,7 @@ function SmartCart() {
                           <Plus className="w-3.5 h-3.5 text-[#F5F0E8]/70" />
                         </motion.button>
                         <motion.button
-                          className="ml-1 cursor-pointer"
+                          className="mr-1 cursor-pointer"
                           whileTap={{ scale: 0.85 }}
                           onClick={() => removeFromCart(item.id)}
                         >
@@ -975,8 +1087,8 @@ function SmartCart() {
                 </AnimatePresence>
               </div>
 
-              {/* AI suggestion */}
-              {total < 50 && (
+              {/* AI upsell suggestion */}
+              {total < 50 && firstDrink && (
                 <motion.div
                   className="mx-6 mt-4 p-4 glass rounded-2xl"
                   initial={{ opacity: 0, y: 10 }}
@@ -986,26 +1098,17 @@ function SmartCart() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Bot className="w-4 h-4 text-[#C9A46C]" />
-                      <span className="text-sm text-[#F5F0E8]/50 font-inter">
-                        Most customers add a drink with this 🍷
+                      <span className="text-sm text-[#F5F0E8]/50">
+                        معظم الزبائن يضيفون مشروب مع هذا 🍷
                       </span>
                     </div>
                     <motion.button
                       className="text-[#C9A46C] text-sm font-medium cursor-pointer"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() =>
-                        addToCart({
-                          id: 'drink',
-                          name: 'House Wine',
-                          description: 'Curated pairing from our sommelier',
-                          price: 18,
-                          image:
-                            'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=300&fit=crop',
-                        })
-                      }
+                      onClick={() => addToCart(firstDrink)}
                     >
-                      Add a Drink
+                      أضف مشروب
                     </motion.button>
                   </div>
                 </motion.div>
@@ -1014,145 +1117,38 @@ function SmartCart() {
               {/* Footer */}
               <div className="px-6 py-4 border-t border-white/5 mt-auto">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-[#F5F0E8]/50 font-inter">
-                    Total
+                  <span className="text-sm text-[#F5F0E8]/50">
+                    المجموع
                   </span>
                   <span className="font-playfair text-2xl font-bold gold-text">
-                    ${total}
+                    {total} ر.س
                   </span>
                 </div>
                 <motion.button
-                  className="w-full bg-[#C9A46C] text-[#0F0F0F] font-semibold py-3.5 rounded-full mt-3 flex items-center justify-center gap-2"
+                  className="w-full bg-[#C9A46C] text-[#0F0F0F] font-semibold py-3.5 rounded-full mt-3 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
+                  disabled={orderPlacing}
+                  onClick={() => placeOrder()}
                 >
-                  Place Order — ${total}
-                  <ArrowRight className="w-4 h-4" />
+                  {orderPlacing ? (
+                    <motion.div
+                      className="w-5 h-5 border-2 border-[#0F0F0F]/30 border-t-[#0F0F0F] rounded-full"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                    />
+                  ) : (
+                    <>
+                      تأكيد الطلب — {total} ر.س
+                      <ArrowLeft className="w-4 h-4" />
+                    </>
+                  )}
                 </motion.button>
               </div>
             </>
           )}
         </motion.div>
       )}
-    </AnimatePresence>
-  );
-}
-
-// ─── 8. DishDetailOverlay ─────────────────────────────────────────────────────
-
-function DishDetailOverlay() {
-  const { activeDish, setActiveDish, addToCart, setVoiceOpen, voiceOpen } =
-    useServioStore();
-
-  if (!activeDish || voiceOpen) return null;
-
-  return (
-    <AnimatePresence>
-      <motion.div
-        className="fixed inset-0 z-[55] flex items-end sm:items-center justify-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        {/* Backdrop */}
-        <motion.div
-          className="absolute inset-0 bg-black/60"
-          onClick={() => setActiveDish(null)}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        />
-
-        {/* Content */}
-        <motion.div
-          className="relative glass-strong rounded-t-3xl sm:rounded-3xl w-full sm:max-w-md p-6 z-10"
-          initial={{ y: 60, opacity: 0, scale: 0.95 }}
-          animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ y: 60, opacity: 0, scale: 0.95 }}
-          transition={{
-            type: 'spring',
-            damping: 28,
-            stiffness: 300,
-          }}
-        >
-          {/* Image */}
-          <div className="relative h-52 w-full rounded-2xl overflow-hidden">
-            <img
-              src={activeDish.image}
-              alt={activeDish.name}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-            <DishBadge badge={activeDish.badge} />
-          </div>
-
-          {/* Name */}
-          <h3 className="font-playfair text-2xl font-bold text-[#F5F0E8] mt-4">
-            {activeDish.name}
-          </h3>
-
-          {/* Description */}
-          <p className="text-sm text-[#F5F0E8]/50 mt-2 leading-relaxed font-inter">
-            {activeDish.description}
-          </p>
-
-          {/* Price */}
-          <p className="gold-text font-playfair text-3xl font-bold mt-4">
-            ${activeDish.price}
-          </p>
-
-          {/* Conversion labels */}
-          <div className="flex items-center gap-4 mt-3">
-            {activeDish.badge === 'popular' && (
-              <span className="flex items-center gap-1.5 text-[#C9A46C] text-xs font-inter">
-                <Flame className="w-3.5 h-3.5" />
-                Most Ordered Today
-              </span>
-            )}
-            {activeDish.badge === 'new' && (
-              <span className="flex items-center gap-1.5 text-red-400 text-xs font-inter">
-                <Star className="w-3.5 h-3.5" />
-                Limited Availability
-              </span>
-            )}
-            {activeDish.badge === 'recommended' && (
-              <span className="flex items-center gap-1.5 text-[#C9A46C] text-xs font-inter">
-                <TrendingUp className="w-3.5 h-3.5" />
-                AI Recommended
-              </span>
-            )}
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex flex-col gap-3 mt-6">
-            <motion.button
-              className="bg-[#C9A46C] text-[#0F0F0F] font-semibold py-3.5 rounded-full w-full flex items-center justify-center gap-2"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => {
-                addToCart(activeDish);
-                setActiveDish(null);
-              }}
-            >
-              <Plus className="w-4 h-4" />
-              Add to Order — ${activeDish.price}
-            </motion.button>
-            <motion.button
-              className="glass flex items-center justify-center gap-2 py-3.5 rounded-full w-full text-[#F5F0E8] font-medium"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => {
-                setActiveDish(activeDish);
-                setVoiceOpen(true);
-              }}
-            >
-              <Mic className="w-4 h-4 text-[#C9A46C]" />
-              Ask AI Waiter
-            </motion.button>
-          </div>
-        </motion.div>
-      </motion.div>
     </AnimatePresence>
   );
 }
@@ -1167,7 +1163,7 @@ function CartFAB() {
 
   return (
     <motion.button
-      className="fixed bottom-6 right-6 z-40 glass-strong rounded-full p-4 flex items-center gap-3 cta-pulse cursor-pointer"
+      className="fixed bottom-6 left-6 z-40 glass-strong rounded-full p-4 flex items-center gap-3 cta-pulse cursor-pointer"
       initial={{ scale: 0, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       exit={{ scale: 0, opacity: 0 }}
@@ -1177,12 +1173,12 @@ function CartFAB() {
       onClick={() => setCartOpen(true)}
     >
       <ShoppingCart className="w-5 h-5 text-[#C9A46C]" />
-      <span className="gold-text font-bold text-sm font-inter">
-        ${cartTotal()}
+      <span className="gold-text font-bold text-sm">
+        {cartTotal()} ر.س
       </span>
       {count > 0 && (
         <motion.span
-          className="absolute -top-1 -right-1 bg-[#7A1C1C] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold"
+          className="absolute -top-1 -left-1 bg-[#7A1C1C] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', damping: 15, stiffness: 300 }}
@@ -1194,9 +1190,53 @@ function CartFAB() {
   );
 }
 
-// ─── 10. Main Export ──────────────────────────────────────────────────────────
+// ─── 10. OrderSuccessToast ────────────────────────────────────────────────────
+
+function OrderSuccessToast() {
+  const { orderSuccess, resetOrder } = useServioStore();
+
+  return (
+    <AnimatePresence>
+      {orderSuccess && (
+        <motion.div
+          className="fixed top-6 left-1/2 -translate-x-1/2 z-[70] glass-strong rounded-2xl px-6 py-4 flex items-center gap-3 shadow-lg"
+          initial={{ opacity: 0, y: -30, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -20, scale: 0.95 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', damping: 15, stiffness: 300, delay: 0.15 }}
+          >
+            <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+          </motion.div>
+          <span className="text-[#F5F0E8] font-medium text-sm">
+            تم تأكيد طلبك بنجاح! ✅
+          </span>
+          <motion.button
+            className="mr-2 cursor-pointer"
+            whileTap={{ scale: 0.9 }}
+            onClick={resetOrder}
+          >
+            <X className="w-4 h-4 text-[#F5F0E8]/40 hover:text-[#F5F0E8] transition-colors" />
+          </motion.button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ─── 11. Main Export ──────────────────────────────────────────────────────────
 
 export default function ServioLanding() {
+  const { fetchMenu } = useServioStore();
+
+  useEffect(() => {
+    fetchMenu();
+  }, [fetchMenu]);
+
   return (
     <div
       className="relative min-h-screen grain-overlay vignette"
@@ -1208,12 +1248,14 @@ export default function ServioLanding() {
 
       <main className="relative z-10">
         <HeroSection />
+        <CategoryTabs />
         <MenuPreview />
       </main>
 
       <VoiceAIOverlay />
       <SmartCart />
       <CartFAB />
+      <OrderSuccessToast />
     </div>
   );
 }
