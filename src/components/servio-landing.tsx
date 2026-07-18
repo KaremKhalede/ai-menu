@@ -28,6 +28,20 @@ import {
   type AIState,
   getBadge,
 } from '@/lib/servio-store';
+import {
+  HowItWorks,
+  AIVoiceDemo,
+  SmartMenuExperience,
+  AIDashboard,
+  Results,
+} from './servio-sections-a';
+import {
+  Pricing,
+  AIPersonalization,
+  Integration,
+  FinalCTA,
+  Footer,
+} from './servio-sections-b';
 
 // ─── Animation Variants ──────────────────────────────────────────────────────
 
@@ -1250,12 +1264,22 @@ export default function ServioLanding() {
         <HeroSection />
         <CategoryTabs />
         <MenuPreview />
+        <HowItWorks />
+        <AIVoiceDemo />
+        <SmartMenuExperience />
+        <AIDashboard />
+        <Results />
+        <Pricing />
+        <AIPersonalization />
+        <Integration />
+        <FinalCTA />
       </main>
 
       <VoiceAIOverlay />
       <SmartCart />
       <CartFAB />
       <OrderSuccessToast />
+      <Footer />
     </div>
   );
 }
