@@ -1,0 +1,856 @@
+     1→'use client';
+     2→
+     3→import { useState } from 'react';
+     4→import {
+     5→  dailyRevenue,
+     6→  hourlyOrders,
+     7→  aiInsights,
+     8→  enhancedKPIs,
+     9→  aiRevenueKPIs,
+    10→  conversionFunnel,
+    11→  dropOffAnalysis,
+    12→} from '@/lib/demo-data';
+    13→import { useStore } from '@/lib/store';
+    14→import {
+    15→  ArrowRight,
+    16→  TrendingUp,
+    17→  TrendingDown,
+    18→  DollarSign,
+    19→  ShoppingBag,
+    20→  Star,
+    21→  Percent,
+    22→  AlertTriangle,
+    23→  CheckCircle,
+    24→  Info,
+    25→  Lightbulb,
+    26→  Clock,
+    27→  UtensilsCrossed,
+    28→  BarChart3,
+    29→  Target,
+    30→  Users,
+    31→  Settings,
+    32→  Sparkles,
+    33→  Flame,
+    34→  TrendingDownIcon,
+    35→  BrainCircuit,
+    36→  Zap,
+    37→  ArrowDownUp,
+    38→  UserCheck,
+    39→  MapPin,
+    40→  LayoutGrid,
+    41→  FileText,
+    42→} from 'lucide-react';
+    43→import { motion } from 'framer-motion';
+    44→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+    45→import { Button } from '@/components/ui/button';
+    46→import {
+    47→  BarChart,
+    48→  Bar,
+    49→  XAxis,
+    50→  YAxis,
+    51→  Tooltip,
+    52→  ResponsiveContainer,
+    53→  AreaChart,
+    54→  Area,
+    55→  CartesianGrid,
+    56→} from 'recharts';
+    57→
+    58→/* ───────────────────── Animation Variants ───────────────────── */
+    59→
+    60→const fadeUp = {
+    61→  hidden: { opacity: 0, y: 24 },
+    62→  visible: (i: number) => ({
+    63→    opacity: 1,
+    64→    y: 0,
+    65→    transition: { delay: i * 0.06, duration: 0.5, ease: 'easeOut' as const },
+    66→  }),
+    67→};
+    68→
+    69→const stagger = {
+    70→  hidden: {},
+    71→  visible: { transition: { staggerChildren: 0.06 } },
+    72→};
+    73→
+    74→/* ───────────────────── KPI Row 1 Config ───────────────────── */
+    75→
+    76→const kpiRow1 = [
+    77→  {
+    78→    label: 'إجمالي الإيرادات',
+    79→    value: `${enhancedKPIs.totalRevenue.toLocaleString('ar-SA')} ر.س`,
+    80→    icon: DollarSign,
+    81→    trend: '+12%',
+    82→    trendUp: true,
+    83→  },
+    84→  {
+    85→    label: 'إجمالي الطلبات',
+    86→    value: `${enhancedKPIs.totalOrders}`,
+    87→    icon: ShoppingBag,
+    88→    trend: '+8%',
+    89→    trendUp: true,
+    90→  },
+    91→  {
+    92→    label: 'متوسط قيمة الطلب',
+    93→    value: `${enhancedKPIs.avgOrderValue} ر.س`,
+    94→    icon: Target,
+    95→    trend: '+5%',
+    96→    trendUp: true,
+    97→  },
+    98→  {
+    99→    label: 'نسبة التحويل',
+   100→    value: `${enhancedKPIs.conversionRate}%`,
+   101→    icon: Percent,
+   102→    trend: '-2%',
+   103→    trendUp: false,
+   104→  },
+   105→  {
+   106→    label: 'نسبة نجاح AI Upsell',
+   107→    value: `${enhancedKPIs.aiUpsellRate}%`,
+   108→    icon: Flame,
+   109→    trend: '+15%',
+   110→    trendUp: true,
+   111→    highlight: true as const,
+   112→  },
+   113→  {
+   114→    label: 'معدل التسرب',
+   115→    value: `${enhancedKPIs.dropOffRate}%`,
+   116→    icon: TrendingDownIcon,
+   117→    trend: '-3%',
+   118→    trendUp: true,
+   119→    invertTrend: true as const,
+   120→  },
+   121→];
+   122→
+   123→/* ───────────────────── KPI Row 2 Config (AI Engine) ───────────────────── */
+   124→
+   125→const kpiRow2 = [
+   126→  {
+   127→    label: 'إيرادات AI',
+   128→    value: `${aiRevenueKPIs.aiRevenueGenerated.toLocaleString('ar-SA')} ر.س`,
+   129→    icon: BrainCircuit,
+   130→    subtext: `من ${aiRevenueKPIs.totalAISuggestions} اقتراح`,
+   131→  },
+   132→  {
+   133→    label: 'تحسين الطلب بـ AI',
+   134→    value: `+${aiRevenueKPIs.aiLiftPercentage}%`,
+   135→    icon: TrendingUp,
+   136→    subtext: `${aiRevenueKPIs.avgOrderWithoutAI} → ${aiRevenueKPIs.avgOrderWithAI} ر.س`,
+   137→  },
+   138→  {
+   139→    label: 'اقتراحات AI',
+   140→    value: `${aiRevenueKPIs.totalAISuggestions.toLocaleString('ar-SA')}`,
+   141→    icon: Zap,
+   142→    subtext: `${aiRevenueKPIs.aiConversionRate}% معدل التحويل`,
+   143→  },
+   144→  {
+   145→    label: 'معدل تحويل AI',
+   146→    value: `${aiRevenueKPIs.aiConversionRate}%`,
+   147→    icon: Sparkles,
+   148→    subtext: `${Math.round(aiRevenueKPIs.aiConversionRate * aiRevenueKPIs.totalAISuggestions / 100)} تحويل`,
+   149→  },
+   150→];
+   151→
+   152→/* ───────────────────── Custom Tooltips ───────────────────── */
+   153→
+   154→function GoldTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; dataKey: string }>; label?: string }) {
+   155→  if (!active || !payload?.length) return null;
+   156→  return (
+   157→    <div className="glass-card px-4 py-3 border-[#d4a853]/30 shadow-lg shadow-black/40">
+   158→      <p className="text-sm text-[#8a8578] mb-1">{label}</p>
+   159→      <p className="text-lg font-bold text-[#d4a853]">
+   160→        {payload[0].value.toLocaleString('ar-SA')} ر.س
+   161→      </p>
+   162→    </div>
+   163→  );
+   164→}
+   165→
+   166→function BarTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
+   167→  if (!active || !payload?.length) return null;
+   168→  return (
+   169→    <div className="glass-card px-4 py-3 border-[#d4a853]/30 shadow-lg shadow-black/40">
+   170→      <p className="text-sm text-[#8a8578] mb-1">{label}</p>
+   171→      <p className="text-lg font-bold text-[#d4a853]">
+   172→        {payload[0].value} طلب
+   173→      </p>
+   174→    </div>
+   175→  );
+   176→}
+   177→
+   178→/* ───────────────────── Insight Helpers ───────────────────── */
+   179→
+   180→function InsightIcon({ type }: { type: 'success' | 'warning' | 'info' }) {
+   181→  switch (type) {
+   182→    case 'success':
+   183→      return <CheckCircle className="h-5 w-5 text-emerald-400 shrink-0" />;
+   184→    case 'warning':
+   185→      return <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0" />;
+   186→    case 'info':
+   187→      return <Info className="h-5 w-5 text-orange-400 shrink-0" />;
+   188→  }
+   189→}
+   190→
+   191→function InsightBorder({ type }: { type: 'success' | 'warning' | 'info' }) {
+   192→  switch (type) {
+   193→    case 'success':
+   194→      return 'border-emerald-500/30';
+   195→    case 'warning':
+   196→      return 'border-amber-500/30';
+   197→    case 'info':
+   198→      return 'border-orange-500/30';
+   199→  }
+   200→}
+   201→
+   202→/* ───────────────────── Severity Helpers ───────────────────── */
+   203→
+   204→function SeverityConfig(severity: 'high' | 'medium' | 'low') {
+   205→  switch (severity) {
+   206→    case 'high':
+   207→      return { color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30', dot: 'bg-red-400', label: 'مرتفع' };
+   208→    case 'medium':
+   209→      return { color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/30', dot: 'bg-amber-400', label: 'متوسط' };
+   210→    case 'low':
+   211→      return { color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', dot: 'bg-emerald-400', label: 'منخفض' };
+   212→  }
+   213→}
+   214→
+   215→/* ═══════════════════════════════════════════════════════════════
+   216→   Dashboard Component
+   217→   ═══════════════════════════════════════════════════════════════ */
+   218→
+   219→function DashboardAuthGuard({ children, user }: { children: React.ReactNode; user: { name?: string } | null }) {
+   220→  const { setView, isAuthenticated } = useStore();
+   221→  if (!isAuthenticated) {
+   222→    return (
+   223→      <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center gap-6 p-6 text-center">
+   224→        <div className="w-20 h-20 rounded-full bg-[#1a1a2e] flex items-center justify-center">
+   225→          <BarChart3 className="h-10 w-10 text-[#d4a853]" />
+   226→        </div>
+   227→        <h2 className="text-2xl font-bold gold-gradient-text">لوحة التحكم</h2>
+   228→        <p className="text-muted-foreground max-w-sm">يجب تسجيل الدخول للوصول إلى لوحة التحكم وأدوات إدارة المطعم</p>
+   229→        <Button onClick={() => setView('login')} className="gold-gradient hover:opacity-90">
+   230→          تسجيل الدخول
+   231→        </Button>
+   232→        <Button variant="ghost" onClick={() => setView('landing')}>
+   233→          العودة للرئيسية
+   234→        </Button>
+   235→      </div>
+   236→    );
+   237→  }
+   238→  return <>{children}</>;
+   239→}
+   240→
+   241→const AuthGuard = DashboardAuthGuard;
+   242→
+   243→/* ──────────────── Conversion Funnel Component ──────────────── */
+   244→
+   245→function ConversionFunnelViz() {
+   246→  const maxCount = conversionFunnel[0].count;
+   247→  const barColors = [
+   248→    'from-[#d4a853] to-[#c49a45]',
+   249→    'from-[#c49a45] to-[#b08c3d]',
+   250→    'from-[#b08c3d] to-[#9a7a35]',
+   251→    'from-[#9a7a35] to-[#7a6229]',
+   252→    'from-[#7a6229] to-[#5e4c20]',
+   253→  ];
+   254→
+   255→  return (
+   256→    <div className="space-y-2.5">
+   257→      {conversionFunnel.map((step, i) => {
+   258→        const widthPct = (step.count / maxCount) * 100;
+   259→        const dropOff = i > 0
+   260→          ? ((conversionFunnel[i - 1].count - step.count) / conversionFunnel[i - 1].count * 100).toFixed(1)
+   261→          : null;
+   262→
+   263→        return (
+   264→          <div key={step.stage}>
+   265→            {/* Drop-off indicator */}
+   266→            {dropOff && (
+   267→              <div className="flex justify-center mb-1">
+   268→                <span className="text-[11px] font-medium text-red-400 bg-red-500/10 px-2.5 py-0.5 rounded-full">
+   269→                  ↓ تسرب {dropOff}%
+   270→                </span>
+   271→              </div>
+   272→            )}
+   273→            {/* Bar */}
+   274→            <div className="relative group">
+   275→              <motion.div
+   276→                initial={{ scaleX: 0, opacity: 0 }}
+   277→                animate={{ scaleX: 1, opacity: 1 }}
+   278→                transition={{ delay: 0.5 + i * 0.1, duration: 0.5, ease: 'easeOut' }}
+   279→                style={{ width: `${widthPct}%`, transformOrigin: 'right' }}
+   280→                className={`h-11 rounded-xl bg-gradient-to-l ${barColors[i]} flex items-center justify-between px-4 relative overflow-hidden`}
+   281→              >
+   282→                {/* Shine effect */}
+   283→                <div className="absolute inset-0 bg-gradient-to-l from-white/[0.08] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+   284→                <span className="text-sm font-bold text-[#0a0a0f] z-10">{step.stage}</span>
+   285→                <div className="flex items-center gap-2 z-10">
+   286→                  <span className="text-xs font-semibold text-[#0a0a0f]/80">{step.count.toLocaleString('ar-SA')}</span>
+   287→                  <span className="text-[11px] font-bold text-[#0a0a0f]/60 bg-black/10 px-2 py-0.5 rounded-full">
+   288→                    {step.percentage}%
+   289→                  </span>
+   290→                </div>
+   291→              </motion.div>
+   292→            </div>
+   293→          </div>
+   294→        );
+   295→      })}
+   296→    </div>
+   297→  );
+   298→}
+   299→
+   300→/* ──────────────── Smart Sort Handler ──────────────── */
+   301→
+   302→function handleSmartSort() {
+   303→  fetch('/api/menu/smart-sort', { method: 'POST' })
+   304→    .then((res) => res.json())
+   305→    .then(() => {
+   306→      // Optionally trigger a toast or state update
+   307→    })
+   308→    .catch(() => {
+   309→      // Silent fail for demo
+   310→    });
+   311→}
+   312→
+   313→/* ═══════════════════════════════════════════════════════════════
+   314→   Main Dashboard Export
+   315→   ═══════════════════════════════════════════════════════════════ */
+   316→
+   317→export default function Dashboard() {
+   318→  const { setView, isAuthenticated, user } = useStore();
+   319→
+   320→  // Enhanced AI insights with 2 new entries
+   321→  const allInsights = [
+   322→    ...aiInsights,
+   323→    {
+   324→      type: 'success' as const,
+   325→      title: 'تحسن أداء اقتراحات AI',
+   326→      description: 'نسبة نجاح اقتراحات AI ارتفعت 15% هذا الأسبوع. النظام يتعلم من سلوك العملاء ويحسّن اقتراحاته تلقائياً.',
+   327→      action: 'عرض تقرير AI',
+   328→    },
+   329→    {
+   330→      type: 'success' as const,
+   331→      title: 'انخفاض معدل التسرب',
+   332→      description: 'معدل التسرب انخفض 3% بفضل تحسين واجهة تفاصيل الأطباق.',
+   333→      action: 'عرض تحليل التسرب',
+   334→    },
+   335→  ];
+   336→
+   337→  return (
+   338→    <AuthGuard user={user}>
+   339→    <div dir="rtl" className="min-h-screen bg-[#0a0a0f] text-[#f0ece4] pb-12">
+   340→      {/* ══════════════ A. Top Bar ══════════════ */}
+   341→      <div className="sticky top-0 z-30 backdrop-blur-xl bg-[#0a0a0f]/80 border-b border-white/[0.06]">
+   342→        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+   343→          <div className="flex items-center justify-between mb-3 sm:mb-0">
+   344→            <div className="flex items-center gap-3">
+   345→              <div className="h-10 w-10 rounded-xl gold-gradient flex items-center justify-center">
+   346→                <BarChart3 className="h-5 w-5 text-[#0a0a0f]" />
+   347→              </div>
+   348→              <h1 className="text-xl sm:text-2xl font-bold gold-gradient-text">
+   349→                لوحة التحكم
+   350→              </h1>
+   351→              {user?.name && (
+   352→                <span className="hidden sm:block text-xs text-muted-foreground mr-2">
+   353→                  مرحباً، {user.name}
+   354→                </span>
+   355→              )}
+   356→            </div>
+   357→            <Button
+   358→              variant="ghost"
+   359→              size="icon"
+   360→              className="text-muted-foreground hover:text-foreground shrink-0"
+   361→              onClick={() => setView('settings')}
+   362→            >
+   363→              <Settings className="h-5 w-5" />
+   364→            </Button>
+   365→          </div>
+   366→
+   367→          {/* Navigation Buttons */}
+   368→          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+   369→            <Button
+   370→              variant="outline"
+   371→              size="sm"
+   372→              className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] text-xs whitespace-nowrap shrink-0"
+   373→              onClick={() => setView('menu')}
+   374→            >
+   375→              <UtensilsCrossed className="h-3.5 w-3.5 ml-1" />
+   376→              المنيو
+   377→            </Button>
+   378→            <Button
+   379→              variant="outline"
+   380→              size="sm"
+   381→              className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] text-xs whitespace-nowrap shrink-0"
+   382→              onClick={() => setView('menu-editor')}
+   383→            >
+   384→              <LayoutGrid className="h-3.5 w-3.5 ml-1" />
+   385→              محرر المنيو
+   386→            </Button>
+   387→            <Button
+   388→              variant="outline"
+   389→              size="sm"
+   390→              className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] text-xs whitespace-nowrap shrink-0"
+   391→              onClick={() => setView('auto-menu-generator')}
+   392→            >
+   393→              <Sparkles className="h-3.5 w-3.5 ml-1" />
+   394→              توليد قائمة AI
+   395→            </Button>
+   396→            <Button
+   397→              variant="outline"
+   398→              size="sm"
+   399→              className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] text-xs whitespace-nowrap shrink-0"
+   400→              onClick={() => setView('heatmap')}
+   401→            >
+   402→              <MapPin className="h-3.5 w-3.5 ml-1" />
+   403→              خريطة حرارية
+   404→            </Button>
+   405→            <Button
+   406→              variant="outline"
+   407→              size="sm"
+   408→              className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] text-xs whitespace-nowrap shrink-0"
+   409→              onClick={() => setView('crm')}
+   410→            >
+   411→              <Users className="h-3.5 w-3.5 ml-1" />
+   412→              CRM
+   413→            </Button>
+   414→          </div>
+   415→        </div>
+   416→      </div>
+   417→
+   418→      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
+   419→
+   420→        {/* ══════════════ B. KPI Cards Row 1 — Main KPIs (6 cards) ══════════════ */}
+   421→        <motion.div
+   422→          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4"
+   423→          variants={stagger}
+   424→          initial="hidden"
+   425→          animate="visible"
+   426→        >
+   427→          {kpiRow1.map((kpi, i) => {
+   428→            const Icon = kpi.icon;
+   429→            const isHighlight = (kpi as { highlight?: boolean }).highlight;
+   430→            const invertTrend = (kpi as { invertTrend?: boolean }).invertTrend;
+   431→            // For drop-off rate: -3% is actually good (less drop-off), so show green
+   432→            const isTrendPositive = invertTrend ? kpi.trendUp : kpi.trendUp;
+   433→
+   434→            return (
+   435→              <motion.div key={kpi.label} custom={i} variants={fadeUp}>
+   436→                <Card className={`glass-card border-0 p-0 overflow-hidden ${isHighlight ? 'ring-1 ring-[#d4a853]/30' : ''}`}>
+   437→                  <CardContent className="p-3 sm:p-4">
+   438→                    <div className="flex items-start justify-between mb-2.5">
+   439→                      <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${isHighlight ? 'bg-[#d4a853]/20' : 'bg-[#d4a853]/10'}`}>
+   440→                        <Icon className={`h-4.5 w-4.5 ${isHighlight ? 'text-[#e8c47c]' : 'text-[#d4a853]'}`} />
+   441→                      </div>
+   442→                      <div
+   443→                        className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${
+   444→                          isTrendPositive
+   445→                            ? 'bg-emerald-500/10 text-emerald-400'
+   446→                            : 'bg-red-500/10 text-red-400'
+   447→                        }`}
+   448→                      >
+   449→                        {isTrendPositive ? (
+   450→                          <TrendingUp className="h-3 w-3" />
+   451→                        ) : (
+   452→                          <TrendingDown className="h-3 w-3" />
+   453→                        )}
+   454→                        {kpi.trend}
+   455→                      </div>
+   456→                    </div>
+   457→                    <p className="text-xl sm:text-2xl font-bold text-[#f0ece4] mb-0.5 leading-tight">
+   458→                      {kpi.value}
+   459→                    </p>
+   460→                    <p className="text-[11px] sm:text-xs text-[#8a8578] truncate">{kpi.label}</p>
+   461→                  </CardContent>
+   462→                </Card>
+   463→              </motion.div>
+   464→            );
+   465→          })}
+   466→        </motion.div>
+   467→
+   468→        {/* ══════════════ C. KPI Cards Row 2 — AI Engine KPIs (4 cards) ══════════════ */}
+   469→        <motion.div
+   470→          initial={{ opacity: 0, y: 24 }}
+   471→          animate={{ opacity: 1, y: 0 }}
+   472→          transition={{ delay: 0.35, duration: 0.5 }}
+   473→        >
+   474→          <div className="flex items-center gap-2 mb-3">
+   475→            <BrainCircuit className="h-4 w-4 text-[#d4a853]" />
+   476→            <h2 className="text-sm font-bold text-[#d4a853]">محرك إيرادات الذكاء الاصطناعي</h2>
+   477→          </div>
+   478→          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+   479→            {kpiRow2.map((kpi, i) => {
+   480→              const Icon = kpi.icon;
+   481→              return (
+   482→                <motion.div
+   483→                  key={kpi.label}
+   484→                  initial={{ opacity: 0, y: 16 }}
+   485→                  animate={{ opacity: 1, y: 0 }}
+   486→                  transition={{ delay: 0.4 + i * 0.06, duration: 0.4 }}
+   487→                >
+   488→                  <Card className="glass-card border-0 p-0 overflow-hidden">
+   489→                    <CardContent className="p-3 sm:p-4">
+   490→                      <div className="flex items-center gap-2 mb-2.5">
+   491→                        <div className="h-8 w-8 rounded-lg bg-[#d4a853]/10 flex items-center justify-center">
+   492→                          <Icon className="h-4 w-4 text-[#d4a853]" />
+   493→                        </div>
+   494→                        <p className="text-[11px] sm:text-xs text-[#8a8578]">{kpi.label}</p>
+   495→                      </div>
+   496→                      <p className="text-xl sm:text-2xl font-bold text-[#f0ece4] mb-0.5 leading-tight">
+   497→                        {kpi.value}
+   498→                      </p>
+   499→                      {kpi.subtext && (
+   500→                        <p className="text-[10px] sm:text-xs text-[#8a8578]/70">{kpi.subtext}</p>
+   501→                      )}
+   502→                    </CardContent>
+   503→                  </Card>
+   504→                </motion.div>
+   505→              );
+   506→            })}
+   507→          </div>
+   508→        </motion.div>
+   509→
+   510→        {/* ══════════════ D. Revenue Chart ══════════════ */}
+   511→        <motion.div
+   512→          initial={{ opacity: 0, y: 24 }}
+   513→          animate={{ opacity: 1, y: 0 }}
+   514→          transition={{ delay: 0.55, duration: 0.5 }}
+   515→        >
+   516→          <Card className="glass-card border-0 overflow-hidden">
+   517→            <CardHeader className="pb-2">
+   518→              <div className="flex items-center gap-2">
+   519→                <DollarSign className="h-5 w-5 text-[#d4a853]" />
+   520→                <CardTitle className="text-lg font-bold text-[#f0ece4]">
+   521→                  الإيرادات اليومية
+   522→                </CardTitle>
+   523→              </div>
+   524→            </CardHeader>
+   525→            <CardContent>
+   526→              <div className="h-64 sm:h-80">
+   527→                <ResponsiveContainer width="100%" height="100%">
+   528→                  <AreaChart data={dailyRevenue} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
+   529→                    <defs>
+   530→                      <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
+   531→                        <stop offset="0%" stopColor="#d4a853" stopOpacity={0.35} />
+   532→                        <stop offset="100%" stopColor="#d4a853" stopOpacity={0} />
+   533→                      </linearGradient>
+   534→                    </defs>
+   535→                    <CartesianGrid
+   536→                      strokeDasharray="3 3"
+   537→                      stroke="rgba(255,255,255,0.06)"
+   538→                      vertical={false}
+   539→                    />
+   540→                    <XAxis
+   541→                      dataKey="day"
+   542→                      tick={{ fill: '#8a8578', fontSize: 12 }}
+   543→                      axisLine={{ stroke: 'rgba(255,255,255,0.08)' }}
+   544→                      tickLine={false}
+   545→                    />
+   546→                    <YAxis
+   547→                      tick={{ fill: '#8a8578', fontSize: 12 }}
+   548→                      axisLine={false}
+   549→                      tickLine={false}
+   550→                      tickFormatter={(v: number) => `${(v / 1000).toFixed(1)}k`}
+   551→                    />
+   552→                    <Tooltip content={<GoldTooltip />} cursor={false} />
+   553→                    <Area
+   554→                      type="monotone"
+   555→                      dataKey="revenue"
+   556→                      stroke="#d4a853"
+   557→                      strokeWidth={2.5}
+   558→                      fill="url(#goldGradient)"
+   559→                    />
+   560→                  </AreaChart>
+   561→                </ResponsiveContainer>
+   562→              </div>
+   563→            </CardContent>
+   564→          </Card>
+   565→        </motion.div>
+   566→
+   567→        {/* ══════════════ E. Two Column Layout ══════════════ */}
+   568→        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+   569→
+   570→          {/* ─── LEFT Column (RTL: appears right) ─── */}
+   571→          <div className="space-y-4 sm:space-y-6">
+   572→
+   573→            {/* Conversion Funnel */}
+   574→            <motion.div
+   575→              initial={{ opacity: 0, x: 24 }}
+   576→              animate={{ opacity: 1, x: 0 }}
+   577→              transition={{ delay: 0.65, duration: 0.5 }}
+   578→            >
+   579→              <Card className="glass-card border-0 overflow-hidden">
+   580→                <CardHeader className="pb-3">
+   581→                  <div className="flex items-center gap-2">
+   582→                    <ArrowDownUp className="h-5 w-5 text-[#d4a853]" />
+   583→                    <CardTitle className="text-lg font-bold text-[#f0ece4]">
+   584→                      قمع التحويل
+   585→                    </CardTitle>
+   586→                  </div>
+   587→                </CardHeader>
+   588→                <CardContent>
+   589→                  <ConversionFunnelViz />
+   590→                  <div className="flex items-center gap-4 mt-4 text-[11px] text-[#8a8578]">
+   591→                    <div className="flex items-center gap-1.5">
+   592→                      <div className="h-2.5 w-2.5 rounded-sm bg-[#d4a853]" />
+   593→                      <span>مرحلة التحويل</span>
+   594→                    </div>
+   595→                    <div className="flex items-center gap-1.5">
+   596→                      <div className="h-2.5 w-2.5 rounded-sm bg-red-500/30 border border-red-400" />
+   597→                      <span>نسبة التسرب</span>
+   598→                    </div>
+   599→                  </div>
+   600→                </CardContent>
+   601→              </Card>
+   602→            </motion.div>
+   603→
+   604→            {/* Peak Hours */}
+   605→            <motion.div
+   606→              initial={{ opacity: 0, x: 24 }}
+   607→              animate={{ opacity: 1, x: 0 }}
+   608→              transition={{ delay: 0.8, duration: 0.5 }}
+   609→            >
+   610→              <Card className="glass-card border-0 overflow-hidden">
+   611→                <CardHeader className="pb-2">
+   612→                  <div className="flex items-center gap-2">
+   613→                    <Clock className="h-5 w-5 text-[#d4a853]" />
+   614→                    <CardTitle className="text-lg font-bold text-[#f0ece4]">
+   615→                      أوقات الذروة
+   616→                    </CardTitle>
+   617→                  </div>
+   618→                </CardHeader>
+   619→                <CardContent>
+   620→                  <div className="h-56 sm:h-64">
+   621→                    <ResponsiveContainer width="100%" height="100%">
+   622→                      <BarChart
+   623→                        data={hourlyOrders}
+   624→                        margin={{ top: 4, right: 0, left: -12, bottom: 0 }}
+   625→                      >
+   626→                        <CartesianGrid
+   627→                          strokeDasharray="3 3"
+   628→                          stroke="rgba(255,255,255,0.04)"
+   629→                          vertical={false}
+   630→                        />
+   631→                        <XAxis
+   632→                          dataKey="hour"
+   633→                          tick={{ fill: '#8a8578', fontSize: 10 }}
+   634→                          axisLine={{ stroke: 'rgba(255,255,255,0.06)' }}
+   635→                          tickLine={false}
+   636→                          interval={2}
+   637→                        />
+   638→                        <YAxis
+   639→                          tick={{ fill: '#8a8578', fontSize: 10 }}
+   640→                          axisLine={false}
+   641→                          tickLine={false}
+   642→                        />
+   643→                        <Tooltip content={<BarTooltip />} cursor={false} />
+   644→                        <Bar
+   645→                          dataKey="orders"
+   646→                          radius={[4, 4, 0, 0]}
+   647→                          maxBarSize={20}
+   648→                          fill="#d4a853"
+   649→                          fillOpacity={0.7}
+   650→                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   651→                          shape={((props: any) => {
+   652→                            const { x, y, width, height, payload } = props as {
+   653→                              x: number;
+   654→                              y: number;
+   655→                              width: number;
+   656→                              height: number;
+   657→                              payload: { hour: string };
+   658→                            };
+   659→                            const isPeak =
+   660→                              payload.hour === '8 م' ||
+   661→                              payload.hour === '9 م' ||
+   662→                              payload.hour === '10 م';
+   663→                            return (
+   664→                              <rect
+   665→                                x={x}
+   666→                                y={y}
+   667→                                width={width}
+   668→                                height={height}
+   669→                                rx={4}
+   670→                                ry={4}
+   671→                                fill={isPeak ? '#e8c47c' : '#d4a853'}
+   672→                                fillOpacity={isPeak ? 1 : 0.6}
+   673→                              />
+   674→                            );
+   675→                          })}
+   676→                        />
+   677→                      </BarChart>
+   678→                    </ResponsiveContainer>
+   679→                  </div>
+   680→                  <div className="flex items-center gap-4 mt-3 text-xs text-[#8a8578]">
+   681→                    <div className="flex items-center gap-1.5">
+   682→                      <div className="h-2.5 w-2.5 rounded-sm bg-[#d4a853]/60" />
+   683→                      <span>عادي</span>
+   684→                    </div>
+   685→                    <div className="flex items-center gap-1.5">
+   686→                      <div className="h-2.5 w-2.5 rounded-sm bg-[#e8c47c]" />
+   687→                      <span>ذروة (8-10 م)</span>
+   688→                    </div>
+   689→                  </div>
+   690→                </CardContent>
+   691→              </Card>
+   692→            </motion.div>
+   693→          </div>
+   694→
+   695→          {/* ─── RIGHT Column (RTL: appears left) ─── */}
+   696→          <div className="space-y-4 sm:space-y-6">
+   697→
+   698→            {/* AI Insights (enhanced with 2 more) */}
+   699→            <motion.div
+   700→              initial={{ opacity: 0, x: -24 }}
+   701→              animate={{ opacity: 1, x: 0 }}
+   702→              transition={{ delay: 0.65, duration: 0.5 }}
+   703→            >
+   704→              <Card className="glass-card border-0 overflow-hidden">
+   705→                <CardHeader className="pb-3">
+   706→                  <div className="flex items-center gap-2">
+   707→                    <Lightbulb className="h-5 w-5 text-[#d4a853]" />
+   708→                    <CardTitle className="text-lg font-bold text-[#f0ece4]">
+   709→                      💡 رؤى الذكاء الاصطناعي
+   710→                    </CardTitle>
+   711→                  </div>
+   712→                </CardHeader>
+   713→                <CardContent className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+   714→                  {allInsights.map((insight, i) => (
+   715→                    <motion.div
+   716→                      key={i}
+   717→                      initial={{ opacity: 0, y: 12 }}
+   718→                      animate={{ opacity: 1, y: 0 }}
+   719→                      transition={{ delay: 0.7 + i * 0.06, duration: 0.4 }}
+   720→                      className={`p-3 rounded-xl border ${InsightBorder({ type: insight.type })} bg-white/[0.02]`}
+   721→                    >
+   722→                      <div className="flex gap-2.5">
+   723→                        <div className="mt-0.5">
+   724→                          <InsightIcon type={insight.type} />
+   725→                        </div>
+   726→                        <div className="flex-1 min-w-0">
+   727→                          <p className="text-sm font-semibold text-[#f0ece4] mb-1">
+   728→                            {insight.title}
+   729→                          </p>
+   730→                          <p className="text-xs text-[#8a8578] leading-relaxed">
+   731→                            {insight.description}
+   732→                          </p>
+   733→                          {insight.action && (
+   734→                            <button className="mt-2 text-xs font-medium text-[#d4a853] border border-[#d4a853]/30 rounded-lg px-3 py-1.5 hover:bg-[#d4a853]/10 transition-colors">
+   735→                              {insight.action}
+   736→                            </button>
+   737→                          )}
+   738→                        </div>
+   739→                      </div>
+   740→                    </motion.div>
+   741→                  ))}
+   742→                </CardContent>
+   743→              </Card>
+   744→            </motion.div>
+   745→
+   746→            {/* Drop-off Analysis */}
+   747→            <motion.div
+   748→              initial={{ opacity: 0, x: -24 }}
+   749→              animate={{ opacity: 1, x: 0 }}
+   750→              transition={{ delay: 1.1, duration: 0.5 }}
+   751→            >
+   752→              <Card className="glass-card border-0 overflow-hidden">
+   753→                <CardHeader className="pb-3">
+   754→                  <div className="flex items-center gap-2">
+   755→                    <TrendingDown className="h-5 w-5 text-[#d4a853]" />
+   756→                    <CardTitle className="text-lg font-bold text-[#f0ece4]">
+   757→                      تحليل التسرب
+   758→                    </CardTitle>
+   759→                  </div>
+   760→                </CardHeader>
+   761→                <CardContent className="space-y-3">
+   762→                  {dropOffAnalysis.map((item, i) => {
+   763→                    const sev = SeverityConfig(item.severity);
+   764→                    return (
+   765→                      <motion.div
+   766→                        key={item.stage}
+   767→                        initial={{ opacity: 0, y: 10 }}
+   768→                        animate={{ opacity: 1, y: 0 }}
+   769→                        transition={{ delay: 1.15 + i * 0.08, duration: 0.4 }}
+   770→                        className={`p-3 rounded-xl border ${sev.border} bg-white/[0.02]`}
+   771→                      >
+   772→                        <div className="flex items-start justify-between mb-1.5">
+   773→                          <div className="flex items-center gap-2">
+   774→                            <div className={`h-2 w-2 rounded-full ${sev.dot}`} />
+   775→                            <p className="text-sm font-semibold text-[#f0ece4]">{item.stage}</p>
+   776→                          </div>
+   777→                          <div className="flex items-center gap-1.5 shrink-0">
+   778→                            <span className={`text-xs font-bold ${sev.color}`}>{item.rate}%</span>
+   779→                            <span className={`text-[10px] ${sev.color} ${sev.bg} px-1.5 py-0.5 rounded-full`}>
+   780→                              {sev.label}
+   781→                            </span>
+   782→                          </div>
+   783→                        </div>
+   784→                        <p className="text-xs text-[#8a8578] leading-relaxed mr-4">{item.suggestion}</p>
+   785→                      </motion.div>
+   786→                    );
+   787→                  })}
+   788→                </CardContent>
+   789→              </Card>
+   790→            </motion.div>
+   791→
+   792→            {/* Quick Actions (enhanced) */}
+   793→            <motion.div
+   794→              initial={{ opacity: 0, x: -24 }}
+   795→              animate={{ opacity: 1, x: 0 }}
+   796→              transition={{ delay: 1.25, duration: 0.5 }}
+   797→            >
+   798→              <Card className="glass-card border-0 overflow-hidden">
+   799→                <CardHeader className="pb-3">
+   800→                  <div className="flex items-center gap-2">
+   801→                    <Star className="h-5 w-5 text-[#d4a853]" />
+   802→                    <CardTitle className="text-lg font-bold text-[#f0ece4]">
+   803→                      إجراءات سريعة
+   804→                    </CardTitle>
+   805→                  </div>
+   806→                </CardHeader>
+   807→                <CardContent className="space-y-2.5">
+   808→                  <Button
+   809→                    className="w-full gold-gradient text-[#0a0a0f] hover:opacity-90 font-semibold justify-center gap-2"
+   810→                    onClick={() => setView('auto-menu-generator')}
+   811→                  >
+   812→                    <Sparkles className="h-4 w-4" />
+   813→                    توليد قائمة بالذكاء الاصطناعي
+   814→                  </Button>
+   815→                  <Button
+   816→                    variant="outline"
+   817→                    className="w-full border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] font-semibold justify-center gap-2"
+   818→                    onClick={() => setView('menu')}
+   819→                  >
+   820→                    <UtensilsCrossed className="h-4 w-4" />
+   821→                    عرض المنيو
+   822→                  </Button>
+   823→                  <Button
+   824→                    variant="outline"
+   825→                    className="w-full border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] font-semibold justify-center gap-2"
+   826→                    onClick={() => setView('heatmap')}
+   827→                  >
+   828→                    <MapPin className="h-4 w-4" />
+   829→                    خريطة حرارية
+   830→                  </Button>
+   831→                  <Button
+   832→                    variant="outline"
+   833→                    className="w-full border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] font-semibold justify-center gap-2"
+   834→                    onClick={() => setView('crm')}
+   835→                  >
+   836→                    <UserCheck className="h-4 w-4" />
+   837→                    CRM وإعادة استهداف
+   838→                  </Button>
+   839→                  <Button
+   840→                    variant="outline"
+   841→                    className="w-full border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] font-semibold justify-center gap-2"
+   842→                    onClick={handleSmartSort}
+   843→                  >
+   844→                    <ArrowDownUp className="h-4 w-4" />
+   845→                    ترتيب ذكي للمنيو
+   846→                  </Button>
+   847→                </CardContent>
+   848→              </Card>
+   849→            </motion.div>
+   850→          </div>
+   851→        </div>
+   852→      </div>
+   853→    </div>
+   854→    </AuthGuard>
+   855→  );
+   856→}

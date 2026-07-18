@@ -13,6 +13,13 @@ import {
   Save,
   Phone,
   Mail,
+  Mic,
+  Volume2,
+  Sparkles,
+  MessageCircle,
+  Zap,
+  Users,
+  TrendingUp,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -20,8 +27,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useStore } from '@/lib/store';
-import type { Restaurant } from '@/lib/types';
+import type { Restaurant, PersonalityMode } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { getAllPersonalities } from '@/lib/voice-personality';
+import type { BrandVoice } from '@/lib/voice-personality';
 
 /* ------------------------------------------------------------------ */
 /*  Data                                                               */
@@ -131,7 +140,7 @@ function SectionCard({
 /* ------------------------------------------------------------------ */
 
 export default function AdminSettings() {
-  const { user, setUser, restaurant, setRestaurant, setView } = useStore();
+  const { user, setUser, restaurant, setRestaurant, setView, personalityMode, setPersonalityMode } = useStore();
   const { toast } = useToast();
 
   const [editName, setEditName] = useState(user?.name || '');
@@ -162,6 +171,15 @@ export default function AdminSettings() {
     setUser(null);
     setView('landing');
     toast({ title: 'تم تسجيل الخروج', description: 'تم تسجيل خروجك بنجاح' });
+  };
+
+  const handleSavePersonality = (mode: PersonalityMode) => {
+    setPersonalityMode(mode);
+    const personality = getAllPersonalities().find(p => p.mode === mode);
+    toast({
+      title: 'تم تغيير الشخصية',
+      description: `الآن النادل الذكي هو "${personality?.name || mode}"`,
+    });
   };
 
   const initials = (editName || 'م').charAt(0);
@@ -377,8 +395,76 @@ export default function AdminSettings() {
             </SectionCard>
           </motion.div>
 
-          {/* ---- Team ---- */}
+          {/* ---- Voice Personality (AI Waiter) ---- */}
           <motion.div variants={fadeUp} custom={2}>
+            <SectionCard title="شخصية النادل الذكي" icon={Mic}>
+              <p className="mb-4 text-xs text-muted-foreground leading-relaxed">
+                اختر نبرة وأسلوب النادل الذكي عند التحدث مع العملاء. كل شخصية لها طريقة مختلفة في التوصية والبيع.
+              </p>
+              <div className="grid grid-cols-1 gap-3">
+                {getAllPersonalities().map((p: BrandVoice) => {
+                  const isActive = personalityMode === p.mode;
+                  return (
+                    <button
+                      key={p.mode}
+                      onClick={() => handleSavePersonality(p.mode)}
+                      className={`relative flex items-start gap-3 rounded-xl border p-4 text-start transition-all ${
+                        isActive
+                          ? 'border-[#d4a853]/60 bg-[#d4a853]/5'
+                          : 'border-border bg-background/40 hover:border-border/80'
+                      }`}
+                    >
+                      <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${
+                        isActive ? 'gold-gradient' : 'bg-white/5'
+                      }`}>
+                        <MessageCircle className={`size-5 ${isActive ? 'text-[#0a0a0f]' : 'text-muted-foreground'}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-bold text-foreground">{p.name}</span>
+                          <Badge className={`text-[10px] px-1.5 py-0 ${
+                            isActive
+                              ? 'bg-[#d4a853]/20 text-[#d4a853] border-[#d4a853]/30'
+                              : 'bg-white/5 text-muted-foreground border-white/10'
+                          }`}>
+                            {p.tone}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                          {p.greeting}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {p.catchphrases.slice(0, 3).map((cp, i) => (
+                            <span key={i} className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] text-muted-foreground">
+                              {cp}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="mt-2 flex items-center gap-1.5">
+                          <Zap className="size-3 text-muted-foreground" />
+                          <span className="text-[10px] text-muted-foreground">
+                            أسلوب البيع: {{ gentle: 'لطيف', direct: 'مباشر', storytelling: 'سرد قصصي', social_proof: 'إثبات اجتماعي' }[p.upsellStyle]}
+                          </span>
+                        </div>
+                      </div>
+                      {isActive && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="absolute -top-1.5 -left-1.5 flex size-5 items-center justify-center rounded-full gold-gradient"
+                        >
+                          <CheckCircle2 className="size-3 text-[#0a0a0f]" />
+                        </motion.div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </SectionCard>
+          </motion.div>
+
+          {/* ---- Team ---- */}
+          <motion.div variants={fadeUp} custom={3}>
             <SectionCard title="الفريق" icon={UserPlus}>
               <h4 className="mb-3 text-sm font-semibold text-foreground">أعضاء الفريق</h4>
               <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -431,7 +517,7 @@ export default function AdminSettings() {
           </motion.div>
 
           {/* ---- Security ---- */}
-          <motion.div variants={fadeUp} custom={3}>
+          <motion.div variants={fadeUp} custom={4}>
             <SectionCard title="الأمان" icon={Shield}>
               <div className="space-y-3">
                 <Button
@@ -461,7 +547,7 @@ export default function AdminSettings() {
           </motion.div>
 
           {/* ---- Subscription ---- */}
-          <motion.div variants={fadeUp} custom={4}>
+          <motion.div variants={fadeUp} custom={5}>
             <SectionCard title="الاشتراك" icon={Crown}>
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex size-10 items-center justify-center rounded-xl bg-[#d4a853]/10">

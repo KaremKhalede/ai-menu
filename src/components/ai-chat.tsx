@@ -8,6 +8,8 @@ import { useStore } from '@/lib/store';
 import type { ChatMessage, Dish } from '@/lib/types';
 // Local fallback kept for offline mode
 import { getAIResponse } from '@/lib/ai-responses';
+import { trackSuggestion } from '@/lib/ai-revenue-engine';
+import { getGreeting } from '@/lib/voice-personality';
 
 export default function AIChat() {
   const {
@@ -20,6 +22,8 @@ export default function AIChat() {
     categories,
     cart,
     addToCart,
+    personalityMode,
+    addAISuggestion,
   } = useStore();
 
   const [input, setInput] = useState('');
@@ -40,16 +44,15 @@ export default function AIChat() {
     return entries;
   }, [categories]);
 
-  // Add welcome message on first open
+  // Add welcome message on first open (uses current personality greeting)
   useEffect(() => {
     if (isChatOpen && chatMessages.length === 0) {
       addChatMessage({
         role: 'assistant',
-        content:
-          'أهلاً وسهلاً! أنا ليو، مساعدك الذكي. كيف أقدر أساعدك في اختيار وجبتك اليوم؟',
+        content: getGreeting(personalityMode),
       });
     }
-  }, [isChatOpen, chatMessages.length, addChatMessage]);
+  }, [isChatOpen, chatMessages.length, addChatMessage, personalityMode]);
 
   // Focus input when panel opens
   useEffect(() => {
@@ -134,6 +137,9 @@ export default function AIChat() {
         const data = await res.json();
         setIsTyping(false);
         addChatMessage({ role: 'assistant', content: data.response });
+
+        // AI Revenue Engine: track dish mentions in AI response
+        trackAIResponse(data.response);
       } else {
         throw new Error('API failed');
       }
@@ -143,11 +149,35 @@ export default function AIChat() {
       const response = getAIResponse(text, selectedDish, cart);
       setIsTyping(false);
       addChatMessage({ role: 'assistant', content: response });
+
+      // Track even fallback responses
+      trackAIResponse(response);
     }
 
     // Clear selected dish after AI responds
     if (selectedDish) {
       setSelectedDish(null);
+    }
+  };
+
+  // Track dish names mentioned in AI responses for revenue engine
+  const trackAIResponse = (response: string) => {
+    const allDishes = categories.flatMap(c => c.dishes);
+    for (const dish of allDishes) {
+      if (response.includes(dish.name)) {
+        // Found a dish mention — track as AI suggestion
+        const suggestionId = crypto.randomUUID();
+        addAISuggestion({
+          sessionId: `session_${Date.now()}`,
+          dishId: dish.id,
+          dishName: dish.name,
+          context: 'chat',
+          message: response.slice(0, 200),
+        });
+        // Also persist to offline storage
+        trackSuggestion(dish.id, dish.name, 'chat', response.slice(0, 200));
+        break; // Track first mention only
+      }
     }
   };
 

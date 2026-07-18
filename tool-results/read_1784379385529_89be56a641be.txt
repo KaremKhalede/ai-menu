@@ -1,0 +1,1143 @@
+     1→'use client';
+     2→
+     3→import { useStore } from '@/lib/store';
+     4→import type { Category, Dish, Addon } from '@/lib/types';
+     5→import {
+     6→  ArrowRight,
+     7→  Plus,
+     8→  Trash2,
+     9→  GripVertical,
+    10→  Sparkles,
+    11→  Image as ImageIcon,
+    12→  Tag,
+    13→  DollarSign,
+    14→  AlignRight,
+    15→  Star,
+    16→  Save,
+    17→  Eye,
+    18→  Wand2,
+    19→  X,
+    20→  ChevronDown,
+    21→  ChevronUp,
+    22→  Edit3,
+    23→} from 'lucide-react';
+    24→import { motion, AnimatePresence, Reorder } from 'framer-motion';
+    25→import { Button } from '@/components/ui/button';
+    26→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+    27→import { Input } from '@/components/ui/input';
+    28→import { Textarea } from '@/components/ui/textarea';
+    29→import { Label } from '@/components/ui/label';
+    30→import { Badge } from '@/components/ui/badge';
+    31→import { Switch } from '@/components/ui/switch';
+    32→import { Separator } from '@/components/ui/separator';
+    33→import {
+    34→  Dialog,
+    35→  DialogContent,
+    36→  DialogHeader,
+    37→  DialogTitle,
+    38→  DialogTrigger,
+    39→} from '@/components/ui/dialog';
+    40→import { useState, useCallback } from 'react';
+    41→import { toast } from 'sonner';
+    42→
+    43→/* ─────────────── emoji map ─────────────── */
+    44→const dishEmojiMap: [string, string][] = [
+    45→  ['قهوة', '☕'],
+    46→  ['شاي', '🍵'],
+    47→  ['شوربة', '🍲'],
+    48→  ['سلطة', '🥗'],
+    49→  ['برجر', '🍔'],
+    50→  ['بيتزا', '🍕'],
+    51→  ['باستا', '🍝'],
+    52→  ['سوشي', '🍣'],
+    53→  ['كعك', '🧁'],
+    54→  ['كيك', '🎂'],
+    55→  ['آيس', '🍦'],
+    56→  ['عصير', '🧃'],
+    57→  ['سمك', '🐟'],
+    58→  ['دجاج', '🍗'],
+    59→  ['لحم', '🥩'],
+    60→  ['ريزوتو', '🍚'],
+    61→  ['ستيك', '🥩'],
+    62→  ['مشويات', '🔥'],
+    63→  ['حلو', '🍮'],
+    64→  ['شوكولا', '🍫'],
+    65→  ['توست', '🍞'],
+    66→  ['ساندوي', '🥪'],
+    67→  ['فطير', '🥧'],
+    68→  ['كرواسون', '🥐'],
+    69→  ['بان', '🥖'],
+    70→];
+    71→
+    72→function getDishEmoji(name: string): string {
+    73→  for (const [key, emoji] of dishEmojiMap) {
+    74→    if (name.includes(key)) return emoji;
+    75→  }
+    76→  return '🍽️';
+    77→}
+    78→
+    79→/* ─────────────── AI description generator ─────────────── */
+    80→const descriptionTemplates: [string, string][] = [
+    81→  [
+    82→    'قهوة',
+    83→    'قهوة مختصة محمصة بعناية، تقدم بنكهة غنية ومتوازنة مع رائحة جذابة تملأ المكان',
+    84→  ],
+    85→  [
+    86→    'شوربة',
+    87→    'حساء دافئ يُحضّر بمكونات طازجة ومختارة بعناية، يقدم كبداية مثالية لوجبتك',
+    88→  ],
+    89→  [
+    90→    'سلطة',
+    91→    'سلطة طازجة ومقرمشة تُحضّر من أجود الخضروات الموسمية مع تتبيلة خاصة تمنحها نكهة فريدة لا تُنسى',
+    92→  ],
+    93→  [
+    94→    'برجر',
+    95→    'برجر فاخر يُعد من لحم أنقس الدواجن المشوي على الفحم، مع خبز بريوش طري وإضافات طازجة تُكمل التجربة',
+    96→  ],
+    97→  [
+    98→    'بيتزا',
+    99→    'بيتزا إيطالية أصلية بعجينة رقيقة ومقرمشة، مغطاة بصلصة الطماطم المحضّرة يدوياً وجبنة موزاريلا كريمية ذائبة',
+   100→  ],
+   101→  [
+   102→    'كعك',
+   103→    'حلوى فاخرة تُحضّر بأيدي خبراء الحلويات، تتميز بنكهات غنية وقوام هش يذوب في الفم',
+   104→  ],
+   105→  [
+   106→    'ستيك',
+   107→    'ستيك أنيق من أجود القطع المشوية حسب الطلب، يقدم مع صوص خاص وخضروات موسمية مشوية تكمل نكهة اللحم',
+   108→  ],
+   109→];
+   110→
+   111→function generateAIDescription(dishName: string): string {
+   112→  for (const [key, template] of descriptionTemplates) {
+   113→    if (dishName.includes(key)) return template;
+   114→  }
+   115→  return 'مزيج رائع من النكهات الفرنسية الكلاسيكية، يُقدم بأجود المكونات الطازجة مع لمسة إبداعية تعكس فن الطبخ الراقي';
+   116→}
+   117→
+   118→/* ─────────────── empty dish form ─────────────── */
+   119→function emptyDish(categoryId: string): Dish {
+   120→  return {
+   121→    id: crypto.randomUUID(),
+   122→    name: '',
+   123→    description: '',
+   124→    price: 0,
+   125→    categoryId,
+   126→    rating: 0,
+   127→    orderCount: 0,
+   128→    tags: [],
+   129→    isAvailable: true,
+   130→    isFeatured: false,
+   131→    addons: [],
+   132→    pairings: [],
+   133→  };
+   134→}
+   135→
+   136→/* ═══════════════════════════════════════════════
+   137→   MAIN COMPONENT
+   138→   ═══════════════════════════════════════════════ */
+   139→function AuthGuard({ children }: { children: React.ReactNode }) {
+   140→  const { setView, isAuthenticated } = useStore();
+   141→  if (!isAuthenticated) {
+   142→    return (
+   143→      <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center gap-6 p-6 text-center">
+   144→        <div className="w-20 h-20 rounded-full bg-[#1a1a2e] flex items-center justify-center">
+   145→          <Edit3 className="h-10 w-10 text-[#d4a853]" />
+   146→        </div>
+   147→        <h2 className="text-2xl font-bold gold-gradient-text">محرر المنيو</h2>
+   148→        <p className="text-muted-foreground max-w-sm">يجب تسجيل الدخول للوصول إلى محرر المنيو</p>
+   149→        <Button onClick={() => setView('login')} className="gold-gradient hover:opacity-90">
+   150→          تسجيل الدخول
+   151→        </Button>
+   152→        <Button variant="ghost" onClick={() => setView('landing')}>
+   153→          العودة للرئيسية
+   154→        </Button>
+   155→      </div>
+   156→    );
+   157→  }
+   158→  return <>{children}</>;
+   159→}
+   160→
+   161→export default function MenuEditor() {
+   162→  const { categories, setCategories, setView } = useStore();
+   163→
+   164→  // UI state
+   165→  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+   166→    new Set(categories.map((c) => c.id))
+   167→  );
+   168→  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+   169→  const [editingCatName, setEditingCatName] = useState('');
+   170→
+   171→  // Dialog state
+   172→  const [dialogOpen, setDialogOpen] = useState(false);
+   173→  const [editingDish, setEditingDish] = useState<Dish | null>(null);
+   174→  const [dishForm, setDishForm] = useState<Dish>(emptyDish(''));
+   175→
+   176→  // AI state
+   177→  const [aiDishName, setAiDishName] = useState('');
+   178→  const [aiDescription, setAiDescription] = useState('');
+   179→  const [aiLoading, setAiLoading] = useState(false);
+   180→
+   181→  // Delete confirmation
+   182→  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+   183→
+   184→  /* ───── category helpers ───── */
+   185→  const toggleCategory = useCallback((id: string) => {
+   186→    setExpandedCategories((prev) => {
+   187→      const next = new Set(prev);
+   188→      if (next.has(id)) next.delete(id);
+   189→      else next.add(id);
+   190→      return next;
+   191→    });
+   192→  }, []);
+   193→
+   194→  const startEditingCat = useCallback(
+   195→    (cat: Category) => {
+   196→      setEditingCatId(cat.id);
+   197→      setEditingCatName(cat.name);
+   198→    },
+   199→    []
+   200→  );
+   201→
+   202→  const saveCatName = useCallback(() => {
+   203→    if (!editingCatId || !editingCatName.trim()) return;
+   204→    setCategories(
+   205→      categories.map((c) =>
+   206→        c.id === editingCatId ? { ...c, name: editingCatName.trim() } : c
+   207→      )
+   208→    );
+   209→    setEditingCatId(null);
+   210→  }, [editingCatId, editingCatName, categories, setCategories]);
+   211→
+   212→  const deleteCategory = useCallback(
+   213→    (catId: string) => {
+   214→      setCategories(categories.filter((c) => c.id !== catId));
+   215→      setDeleteConfirm(null);
+   216→      toast.success('تم حذف التصنيف بنجاح');
+   217→    },
+   218→    [categories, setCategories]
+   219→  );
+   220→
+   221→  const addCategory = useCallback(() => {
+   222→    const newCat: Category = {
+   223→      id: crypto.randomUUID(),
+   224→      name: 'تصنيف جديد',
+   225→      sortOrder: categories.length,
+   226→      dishes: [],
+   227→    };
+   228→    setCategories([...categories, newCat]);
+   229→    setExpandedCategories((prev) => new Set(prev).add(newCat.id));
+   230→  }, [categories, setCategories]);
+   231→
+   232→  /* ───── dish helpers ───── */
+   233→  const openAddDish = useCallback(
+   234→    (categoryId: string) => {
+   235→      const dish = emptyDish(categoryId);
+   236→      setEditingDish(null);
+   237→      setDishForm(dish);
+   238→      setDialogOpen(true);
+   239→    },
+   240→    []
+   241→  );
+   242→
+   243→  const openEditDish = useCallback((dish: Dish) => {
+   244→    setEditingDish(dish);
+   245→    setDishForm({ ...dish, addons: dish.addons.map((a) => ({ ...a })) });
+   246→    setDialogOpen(true);
+   247→  }, []);
+   248→
+   249→  const saveDish = useCallback(() => {
+   250→    if (!dishForm.name.trim()) {
+   251→      toast.error('يرجى إدخال اسم الطبق');
+   252→      return;
+   253→    }
+   254→
+   255→    setCategories((prev) =>
+   256→      prev.map((cat) => {
+   257→        if (cat.id !== dishForm.categoryId) return cat;
+   258→        if (editingDish) {
+   259→          return {
+   260→            ...cat,
+   261→            dishes: cat.dishes.map((d) =>
+   262→              d.id === editingDish.id ? { ...dishForm } : d
+   263→            ),
+   264→          };
+   265→        }
+   266→        return { ...cat, dishes: [...cat.dishes, { ...dishForm }] };
+   267→      })
+   268→    );
+   269→
+   270→    setDialogOpen(false);
+   271→    toast.success(editingDish ? 'تم تعديل الطبق بنجاح' : 'تم إضافة الطبق بنجاح');
+   272→  }, [dishForm, editingDish, setCategories]);
+   273→
+   274→  const deleteDish = useCallback(
+   275→    (categoryId: string, dishId: string) => {
+   276→      setCategories(
+   277→        categories.map((cat) =>
+   278→          cat.id === categoryId
+   279→            ? { ...cat, dishes: cat.dishes.filter((d) => d.id !== dishId) }
+   280→            : cat
+   281→        )
+   282→      );
+   283→      setDeleteConfirm(null);
+   284→      toast.success('تم حذف الطبق بنجاح');
+   285→    },
+   286→    [categories, setCategories]
+   287→  );
+   288→
+   289→  const toggleFeatured = useCallback(
+   290→    (categoryId: string, dishId: string) => {
+   291→      setCategories(
+   292→        categories.map((cat) =>
+   293→          cat.id === categoryId
+   294→            ? {
+   295→                ...cat,
+   296→                dishes: cat.dishes.map((d) =>
+   297→                  d.id === dishId ? { ...d, isFeatured: !d.isFeatured } : d
+   298→                ),
+   299→              }
+   300→            : cat
+   301→        )
+   302→      );
+   303→    },
+   304→    [categories, setCategories]
+   305→  );
+   306→
+   307→  /* ───── reorder helpers ───── */
+   308→  const onCategoryReorder = useCallback(
+   309→    (newOrder: Category[]) => {
+   310→      setCategories(
+   311→        newOrder.map((cat, idx) => ({ ...cat, sortOrder: idx }))
+   312→      );
+   313→    },
+   314→    [setCategories]
+   315→  );
+   316→
+   317→  const onDishReorder = useCallback(
+   318→    (categoryId: string, newDishes: Dish[]) => {
+   319→      setCategories(
+   320→        categories.map((cat) =>
+   321→          cat.id === categoryId ? { ...cat, dishes: newDishes } : cat
+   322→        )
+   323→      );
+   324→    },
+   325→    [categories, setCategories]
+   326→  );
+   327→
+   328→  /* ───── AI helpers ───── */
+   329→  const handleGenerateDescription = useCallback(() => {
+   330→    if (!aiDishName.trim()) {
+   331→      toast.error('يرجى إدخال اسم الطبق');
+   332→      return;
+   333→    }
+   334→    setAiLoading(true);
+   335→    setTimeout(() => {
+   336→      const desc = generateAIDescription(aiDishName);
+   337→      setAiDescription(desc);
+   338→      setAiLoading(false);
+   339→    }, 1000);
+   340→  }, [aiDishName]);
+   341→
+   342→  const copyDescription = useCallback(() => {
+   343→    if (!aiDescription) return;
+   344→    navigator.clipboard.writeText(aiDescription);
+   345→    toast.success('تم نسخ الوصف بنجاح');
+   346→  }, [aiDescription]);
+   347→
+   348→  /* ───── AI suggestions ───── */
+   349→  const allDishes = categories.flatMap((c) => c.dishes);
+   350→  const dishWithoutDesc = allDishes.find((d) => !d.description.trim());
+   351→  const avgPrice =
+   352→    allDishes.length > 0
+   353→      ? allDishes.reduce((s, d) => s + d.price, 0) / allDishes.length
+   354→      : 0;
+   355→  const cheapDish = allDishes.find((d) => avgPrice > 0 && d.price < avgPrice * 0.8);
+   356→  const nonFeaturedDish = allDishes.find((d) => !d.isFeatured);
+   357→
+   358→  const handleSuggestion = useCallback(
+   359→    (type: string) => {
+   360→      if (type === 'improve' && dishWithoutDesc) {
+   361→        const desc = generateAIDescription(dishWithoutDesc.name);
+   362→        setCategories(
+   363→          categories.map((cat) => ({
+   364→            ...cat,
+   365→            dishes: cat.dishes.map((d) =>
+   366→              d.id === dishWithoutDesc.id ? { ...d, description: desc } : d
+   367→            ),
+   368→          }))
+   369→        );
+   370→        toast.success(`تم تحسين وصف "${dishWithoutDesc.name}"`);
+   371→      } else if (type === 'price' && cheapDish) {
+   372→        const newPrice = Math.round(avgPrice);
+   373→        setCategories(
+   374→          categories.map((cat) => ({
+   375→            ...cat,
+   376→            dishes: cat.dishes.map((d) =>
+   377→              d.id === cheapDish.id ? { ...d, price: newPrice } : d
+   378→            ),
+   379→          }))
+   380→        );
+   381→        toast.success(`تم تعديل سعر "${cheapDish.name}" إلى ${newPrice} ر.س`);
+   382→      } else if (type === 'feature' && nonFeaturedDish) {
+   383→        setCategories(
+   384→          categories.map((cat) => ({
+   385→            ...cat,
+   386→            dishes: cat.dishes.map((d) =>
+   387→              d.id === nonFeaturedDish.id ? { ...d, isFeatured: true } : d
+   388→            ),
+   389→          }))
+   390→        );
+   391→        toast.success(`تم تمييز "${nonFeaturedDish.name}"`);
+   392→      }
+   393→    },
+   394→    [dishWithoutDesc, cheapDish, nonFeaturedDish, avgPrice, categories, setCategories]
+   395→  );
+   396→
+   397→  /* ───── dialog addon helpers ───── */
+   398→  const updateFormAddon = useCallback(
+   399→    (index: number, field: keyof Addon, value: string | number) => {
+   400→      const newAddons = [...dishForm.addons];
+   401→      newAddons[index] = { ...newAddons[index], [field]: value };
+   402→      setDishForm({ ...dishForm, addons: newAddons });
+   403→    },
+   404→    [dishForm]
+   405→  );
+   406→
+   407→  const addFormAddon = useCallback(() => {
+   408→    setDishForm({
+   409→      ...dishForm,
+   410→      addons: [...dishForm.addons, { name: '', price: 0 }],
+   411→    });
+   412→  }, [dishForm]);
+   413→
+   414→  const removeFormAddon = useCallback(
+   415→    (index: number) => {
+   416→      setDishForm({
+   417→        ...dishForm,
+   418→        addons: dishForm.addons.filter((_, i) => i !== index),
+   419→      });
+   420→    },
+   421→    [dishForm]
+   422→  );
+   423→
+   424→  /* ═══════════════════════════════════════════════
+   425→     RENDER
+   426→     ═══════════════════════════════════════════════ */
+   427→  return (
+   428→    <AuthGuard>
+   429→    <div dir="rtl" className="min-h-screen flex flex-col" style={{ background: '#0a0a0f' }}>
+   430→      {/* ───── Top Bar ───── */}
+   431→      <header className="sticky top-0 z-40 border-b border-white/5 px-4 py-3 sm:px-6 backdrop-blur-xl" style={{ background: 'rgba(10,10,15,0.85)' }}>
+   432→        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
+   433→          <div className="flex items-center gap-2">
+   434→            <Edit3 className="h-5 w-5 text-[#d4a853]" />
+   435→            <h1 className="text-lg font-bold text-white sm:text-xl">محرر المنيو</h1>
+   436→          </div>
+   437→          <div className="flex items-center gap-2">
+   438→            <Button
+   439→              onClick={() => setView('menu')}
+   440→              className="gap-2 text-black font-semibold hover:bg-[#e0b965] transition-colors"
+   441→              style={{ backgroundColor: '#d4a853' }}
+   442→              size="sm"
+   443→            >
+   444→              <Eye className="h-4 w-4" />
+   445→              <span className="hidden sm:inline">معاينة القائمة</span>
+   446→              <span className="sm:hidden">معاينة</span>
+   447→            </Button>
+   448→            <Button
+   449→              variant="outline"
+   450→              onClick={() => setView('dashboard')}
+   451→              className="gap-2 border-white/10 text-white/70 hover:bg-white/5 hover:text-white transition-colors"
+   452→              size="sm"
+   453→            >
+   454→              <ArrowRight className="h-4 w-4" />
+   455→              <span className="hidden sm:inline">العودة للوحة التحكم</span>
+   456→              <span className="sm:hidden">رجوع</span>
+   457→            </Button>
+   458→          </div>
+   459→        </div>
+   460→      </header>
+   461→
+   462→      {/* ───── Main Content ───── */}
+   463→      <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+   464→        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px] lg:gap-8">
+   465→
+   466→          {/* ══════════════ RIGHT PANEL (RTL left side) — Categories ══════════════ */}
+   467→          <section className="space-y-4">
+   468→            <div className="flex items-center justify-between">
+   469→              <h2 className="text-base font-semibold text-white/90">التصنيفات والأطباق</h2>
+   470→              <Button
+   471→                onClick={addCategory}
+   472→                size="sm"
+   473→                className="gap-1.5 text-black font-semibold hover:bg-[#e0b965] transition-colors"
+   474→                style={{ backgroundColor: '#d4a853' }}
+   475→              >
+   476→                <Plus className="h-4 w-4" />
+   477→                تصنيف جديد
+   478→              </Button>
+   479→            </div>
+   480→
+   481→            {categories.length === 0 && (
+   482→              <motion.div
+   483→                initial={{ opacity: 0, y: 20 }}
+   484→                animate={{ opacity: 1, y: 0 }}
+   485→                className="glass-card flex flex-col items-center justify-center gap-3 p-12 text-center"
+   486→              >
+   487→                <ImageIcon className="h-12 w-12 text-white/20" />
+   488→                <p className="text-sm text-white/40">لا توجد تصنيفات بعد</p>
+   489→                <Button
+   490→                  onClick={addCategory}
+   491→                  size="sm"
+   492→                  className="mt-2 gap-1.5 text-black font-semibold hover:bg-[#e0b965] transition-colors"
+   493→                  style={{ backgroundColor: '#d4a853' }}
+   494→                >
+   495→                  <Plus className="h-4 w-4" />
+   496→                  أضف أول تصنيف
+   497→                </Button>
+   498→              </motion.div>
+   499→            )}
+   500→
+   501→            <Reorder.Group
+   502→              axis="y"
+   503→              values={categories}
+   504→              onReorder={onCategoryReorder}
+   505→              className="space-y-3"
+   506→              layoutScroll
+   507→            >
+   508→              <AnimatePresence mode="popLayout">
+   509→                {categories.map((category) => {
+   510→                  const isExpanded = expandedCategories.has(category.id);
+   511→                  return (
+   512→                    <Reorder.Item
+   513→                      key={category.id}
+   514→                      value={category}
+   515→                      className="list-none"
+   516→                      initial={{ opacity: 0, y: 20 }}
+   517→                      animate={{ opacity: 1, y: 0 }}
+   518→                      exit={{ opacity: 0, scale: 0.95 }}
+   519→                      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+   520→                      whileDrag={{ scale: 1.02, opacity: 0.9, zIndex: 50 }}
+   521→                    >
+   522→                      <div className="glass-card overflow-hidden">
+   523→                        {/* Category Header */}
+   524→                        <div className="flex items-center gap-2 px-4 py-3">
+   525→                          <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-white/25" />
+   526→
+   527→                          {/* Inline editable name */}
+   528→                          {editingCatId === category.id ? (
+   529→                            <input
+   530→                              autoFocus
+   531→                              value={editingCatName}
+   532→                              onChange={(e) => setEditingCatName(e.target.value)}
+   533→                              onBlur={saveCatName}
+   534→                              onKeyDown={(e) => e.key === 'Enter' && saveCatName()}
+   535→                              className="flex-1 rounded border border-[#d4a853]/40 bg-transparent px-2 py-0.5 text-sm text-white outline-none focus:border-[#d4a853]"
+   536→                            />
+   537→                          ) : (
+   538→                            <span
+   539→                              onDoubleClick={() => startEditingCat(category)}
+   540→                              className="flex-1 cursor-text truncate text-sm font-semibold text-white/90 select-none"
+   541→                              title="انقر مرتين للتعديل"
+   542→                            >
+   543→                              {category.name}
+   544→                            </span>
+   545→                          )}
+   546→
+   547→                          <Badge
+   548→                            variant="secondary"
+   549→                            className="shrink-0 bg-white/5 text-[10px] text-white/50"
+   550→                          >
+   551→                            {category.dishes.length} أطباق
+   552→                          </Badge>
+   553→
+   554→                          <Button
+   555→                            variant="ghost"
+   556→                            size="icon"
+   557→                            className="h-7 w-7 shrink-0 text-white/30 hover:text-[#d4a853] hover:bg-white/5"
+   558→                            onClick={() => openAddDish(category.id)}
+   559→                          >
+   560→                            <Plus className="h-4 w-4" />
+   561→                          </Button>
+   562→
+   563→                          <Button
+   564→                            variant="ghost"
+   565→                            size="icon"
+   566→                            className="h-7 w-7 shrink-0 text-white/30 hover:text-red-400 hover:bg-white/5"
+   567→                            onClick={() => deleteCategory(category.id)}
+   568→                            disabled={deleteConfirm === `cat-${category.id}`}
+   569→                          >
+   570→                            <Trash2 className="h-3.5 w-3.5" />
+   571→                          </Button>
+   572→
+   573→                          <Button
+   574→                            variant="ghost"
+   575→                            size="icon"
+   576→                            className="h-7 w-7 shrink-0 text-white/40 hover:text-white/80 hover:bg-white/5"
+   577→                            onClick={() => toggleCategory(category.id)}
+   578→                          >
+   579→                            {isExpanded ? (
+   580→                              <ChevronUp className="h-4 w-4" />
+   581→                            ) : (
+   582→                              <ChevronDown className="h-4 w-4" />
+   583→                            )}
+   584→                          </Button>
+   585→                        </div>
+   586→
+   587→                        {/* Delete Confirmation for Category */}
+   588→                        <AnimatePresence>
+   589→                          {deleteConfirm === `cat-${category.id}` && (
+   590→                            <motion.div
+   591→                              initial={{ height: 0, opacity: 0 }}
+   592→                              animate={{ height: 'auto', opacity: 1 }}
+   593→                              exit={{ height: 0, opacity: 0 }}
+   594→                              className="overflow-hidden"
+   595→                            >
+   596→                              <div className="flex items-center justify-between border-t border-white/5 bg-red-500/5 px-4 py-2.5">
+   597→                                <span className="text-xs text-red-300">
+   598→                                  هل تريد حذف "{category.name}"؟
+   599→                                </span>
+   600→                                <div className="flex gap-2">
+   601→                                  <Button
+   602→                                    size="sm"
+   603→                                    variant="destructive"
+   604→                                    className="h-7 text-xs"
+   605→                                    onClick={() => deleteCategory(category.id)}
+   606→                                  >
+   607→                                    حذف
+   608→                                  </Button>
+   609→                                  <Button
+   610→                                    size="sm"
+   611→                                    variant="ghost"
+   612→                                    className="h-7 text-xs text-white/50 hover:text-white"
+   613→                                    onClick={() => setDeleteConfirm(null)}
+   614→                                  >
+   615→                                    إلغاء
+   616→                                  </Button>
+   617→                                </div>
+   618→                              </div>
+   619→                            </motion.div>
+   620→                          )}
+   621→                        </AnimatePresence>
+   622→
+   623→                        {/* Expanded Dishes */}
+   624→                        <AnimatePresence>
+   625→                          {isExpanded && (
+   626→                            <motion.div
+   627→                              initial={{ height: 0, opacity: 0 }}
+   628→                              animate={{ height: 'auto', opacity: 1 }}
+   629→                              exit={{ height: 0, opacity: 0 }}
+   630→                              transition={{ duration: 0.2 }}
+   631→                              className="overflow-hidden"
+   632→                            >
+   633→                              <Separator className="bg-white/5" />
+   634→
+   635→                              {category.dishes.length === 0 ? (
+   636→                                <div className="flex flex-col items-center gap-2 py-8 text-center">
+   637→                                  <p className="text-xs text-white/30">لا توجد أطباق في هذا التصنيف</p>
+   638→                                  <Button
+   639→                                    variant="ghost"
+   640→                                    size="sm"
+   641→                                    className="h-7 gap-1 text-xs text-[#d4a853] hover:text-[#e0b965]"
+   642→                                    onClick={() => openAddDish(category.id)}
+   643→                                  >
+   644→                                    <Plus className="h-3 w-3" />
+   645→                                    أضف طبق
+   646→                                  </Button>
+   647→                                </div>
+   648→                              ) : (
+   649→                                <Reorder.Group
+   650→                                  axis="y"
+   651→                                  values={category.dishes}
+   652→                                  onReorder={(newDishes) =>
+   653→                                    onDishReorder(category.id, newDishes)
+   654→                                  }
+   655→                                  className="divide-y divide-white/5"
+   656→                                >
+   657→                                  <AnimatePresence mode="popLayout">
+   658→                                    {category.dishes.map((dish) => (
+   659→                                      <Reorder.Item
+   660→                                        key={dish.id}
+   661→                                        value={dish}
+   662→                                        className="list-none"
+   663→                                        initial={{ opacity: 0, x: 20 }}
+   664→                                        animate={{ opacity: 1, x: 0 }}
+   665→                                        exit={{ opacity: 0, x: -20 }}
+   666→                                        whileDrag={{
+   667→                                          scale: 1.01,
+   668→                                          opacity: 0.85,
+   669→                                          zIndex: 40,
+   670→                                        }}
+   671→                                        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+   672→                                      >
+   673→                                        <div className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.02]">
+   674→                                          <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-white/15" />
+   675→
+   676→                                          <span className="text-2xl leading-none" role="img" aria-label={dish.name}>
+   677→                                            {getDishEmoji(dish.name)}
+   678→                                          </span>
+   679→
+   680→                                          <div className="flex-1 min-w-0">
+   681→                                            <p className="truncate text-sm font-medium text-white/85">
+   682→                                              {dish.name || 'بدون اسم'}
+   683→                                            </p>
+   684→                                            {dish.isFeatured && (
+   685→                                              <Badge
+   686→                                                className="mt-0.5 bg-[#d4a853]/15 text-[10px] text-[#d4a853] border-[#d4a853]/20"
+   687→                                              >
+   688→                                                <Star className="mr-0.5 h-2.5 w-2.5" />
+   689→                                                مميز
+   690→                                              </Badge>
+   691→                                            )}
+   692→                                          </div>
+   693→
+   694→                                          <span className="shrink-0 text-sm font-bold text-[#d4a853]">
+   695→                                            {dish.price} ر.س
+   696→                                          </span>
+   697→
+   698→                                          {/* Featured Toggle */}
+   699→                                          <div
+   700→                                            className="flex items-center gap-1.5"
+   701→                                            title="مميز"
+   702→                                          >
+   703→                                            <Switch
+   704→                                              checked={dish.isFeatured}
+   705→                                              onCheckedChange={() =>
+   706→                                                toggleFeatured(category.id, dish.id)
+   707→                                              }
+   708→                                              className="scale-75 data-[state=checked]:bg-[#d4a853]"
+   709→                                            />
+   710→                                          </div>
+   711→
+   712→                                          <Button
+   713→                                            variant="ghost"
+   714→                                            size="icon"
+   715→                                            className="h-7 w-7 shrink-0 text-white/25 hover:text-[#d4a853] hover:bg-white/5"
+   716→                                            onClick={() => openEditDish(dish)}
+   717→                                          >
+   718→                                            <Edit3 className="h-3.5 w-3.5" />
+   719→                                          </Button>
+   720→
+   721→                                          <Button
+   722→                                            variant="ghost"
+   723→                                            size="icon"
+   724→                                            className="h-7 w-7 shrink-0 text-white/25 hover:text-red-400 hover:bg-white/5"
+   725→                                            onClick={() =>
+   726→                                              setDeleteConfirm(`dish-${dish.id}`)
+   727→                                            }
+   728→                                            disabled={deleteConfirm === `dish-${dish.id}`}
+   729→                                          >
+   730→                                            <Trash2 className="h-3.5 w-3.5" />
+   731→                                          </Button>
+   732→                                        </div>
+   733→
+   734→                                        {/* Delete Confirmation for Dish */}
+   735→                                        <AnimatePresence>
+   736→                                          {deleteConfirm === `dish-${dish.id}` && (
+   737→                                            <motion.div
+   738→                                              initial={{ height: 0, opacity: 0 }}
+   739→                                              animate={{ height: 'auto', opacity: 1 }}
+   740→                                              exit={{ height: 0, opacity: 0 }}
+   741→                                              className="overflow-hidden"
+   742→                                            >
+   743→                                              <div className="flex items-center justify-between bg-red-500/5 px-4 py-2.5">
+   744→                                                <span className="text-xs text-red-300">
+   745→                                                  حذف &quot;{dish.name}&quot;؟
+   746→                                                </span>
+   747→                                                <div className="flex gap-2">
+   748→                                                  <Button
+   749→                                                    size="sm"
+   750→                                                    variant="destructive"
+   751→                                                    className="h-7 text-xs"
+   752→                                                    onClick={() =>
+   753→                                                      deleteDish(category.id, dish.id)
+   754→                                                    }
+   755→                                                  >
+   756→                                                    حذف
+   757→                                                  </Button>
+   758→                                                  <Button
+   759→                                                    size="sm"
+   760→                                                    variant="ghost"
+   761→                                                    className="h-7 text-xs text-white/50 hover:text-white"
+   762→                                                    onClick={() => setDeleteConfirm(null)}
+   763→                                                  >
+   764→                                                    إلغاء
+   765→                                                  </Button>
+   766→                                                </div>
+   767→                                              </div>
+   768→                                            </motion.div>
+   769→                                          )}
+   770→                                        </AnimatePresence>
+   771→                                      </Reorder.Item>
+   772→                                    ))}
+   773→                                  </AnimatePresence>
+   774→                                </Reorder.Group>
+   775→                              )}
+   776→                            </motion.div>
+   777→                          )}
+   778→                        </AnimatePresence>
+   779→                      </div>
+   780→                    </Reorder.Item>
+   781→                  );
+   782→                })}
+   783→              </AnimatePresence>
+   784→            </Reorder.Group>
+   785→          </section>
+   786→
+   787→          {/* ══════════════ LEFT PANEL (RTL right side) — AI Tools ══════════════ */}
+   788→          <aside className="space-y-5">
+   789→            {/* ───── AI Description Generator ───── */}
+   790→            <Card className="glass-card border-0 shadow-none">
+   791→              <CardHeader className="pb-3">
+   792→                <CardTitle className="flex items-center gap-2 text-sm font-bold text-[#d4a853]">
+   793→                  <Sparkles className="h-4 w-4" />
+   794→                  مولّد الوصف الذكي
+   795→                </CardTitle>
+   796→              </CardHeader>
+   797→              <CardContent className="space-y-3">
+   798→                <div className="space-y-1.5">
+   799→                  <Label className="text-xs text-white/50">اسم الطبق</Label>
+   800→                  <Input
+   801→                    value={aiDishName}
+   802→                    onChange={(e) => setAiDishName(e.target.value)}
+   803→                    placeholder="مثال: قهوة تركية"
+   804→                    className="border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 focus:border-[#d4a853]/50 focus:ring-[#d4a853]/20"
+   805→                  />
+   806→                </div>
+   807→                <div className="space-y-1.5">
+   808→                  <Label className="text-xs text-white/50">الوصف</Label>
+   809→                  <Textarea
+   810→                    value={aiDescription}
+   811→                    onChange={(e) => setAiDescription(e.target.value)}
+   812→                    placeholder="سيظهر الوصف المُولّد هنا..."
+   813→                    rows={4}
+   814→                    className="resize-none border-white/10 bg-white/5 text-sm leading-relaxed text-white/80 placeholder:text-white/25 focus:border-[#d4a853]/50 focus:ring-[#d4a853]/20"
+   815→                  />
+   816→                </div>
+   817→                <div className="flex gap-2">
+   818→                  <Button
+   819→                    onClick={handleGenerateDescription}
+   820→                    disabled={aiLoading}
+   821→                    className="flex-1 gap-2 text-black font-semibold hover:bg-[#e0b965] transition-colors disabled:opacity-50"
+   822→                    style={{ backgroundColor: '#d4a853' }}
+   823→                    size="sm"
+   824→                  >
+   825→                    {aiLoading ? (
+   826→                      <motion.div
+   827→                        animate={{ rotate: 360 }}
+   828→                        transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+   829→                      >
+   830→                        <Sparkles className="h-4 w-4" />
+   831→                      </motion.div>
+   832→                    ) : (
+   833→                      <Sparkles className="h-4 w-4" />
+   834→                    )}
+   835→                    {aiLoading ? 'جارٍ التوليد...' : 'أنشئ وصف فاخر'}
+   836→                  </Button>
+   837→                  {aiDescription && (
+   838→                    <Button
+   839→                      variant="outline"
+   840→                      onClick={copyDescription}
+   841→                      className="border-white/10 text-white/60 hover:bg-white/5 hover:text-white"
+   842→                      size="sm"
+   843→                    >
+   844→                      نسخ
+   845→                    </Button>
+   846→                  )}
+   847→                </div>
+   848→              </CardContent>
+   849→            </Card>
+   850→
+   851→            {/* ───── AI Suggestions ───── */}
+   852→            <Card className="glass-card border-0 shadow-none">
+   853→              <CardHeader className="pb-3">
+   854→                <CardTitle className="flex items-center gap-2 text-sm font-bold text-[#d4a853]">
+   855→                  <Wand2 className="h-4 w-4" />
+   856→                  اقتراحات AI
+   857→                </CardTitle>
+   858→              </CardHeader>
+   859→              <CardContent className="space-y-3">
+   860→                {/* Suggestion 1: Missing description */}
+   861→                {dishWithoutDesc ? (
+   862→                  <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+   863→                    <p className="mb-2 text-xs leading-relaxed text-white/60">
+   864→                      أضف وصفاً جذاباً لـ{' '}
+   865→                      <span className="font-semibold text-[#d4a853]">
+   866→                        {dishWithoutDesc.name}
+   867→                      </span>
+   868→                    </p>
+   869→                    <Button
+   870→                      size="sm"
+   871→                      variant="outline"
+   872→                      className="h-7 text-xs border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853]"
+   873→                      onClick={() => handleSuggestion('improve')}
+   874→                    >
+   875→                      تحسين
+   876→                    </Button>
+   877→                  </div>
+   878→                ) : (
+   879→                  <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+   880→                    <p className="text-xs leading-relaxed text-white/30">
+   881→                      ✅ جميع الأطباق لها أوصاف
+   882→                    </p>
+   883→                  </div>
+   884→                )}
+   885→
+   886→                {/* Suggestion 2: Low price */}
+   887→                {cheapDish ? (
+   888→                  <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+   889→                    <p className="mb-2 text-xs leading-relaxed text-white/60">
+   890→                      سعر{' '}
+   891→                      <span className="font-semibold text-[#d4a853]">
+   892→                        {cheapDish.name}
+   893→                      </span>{' '}
+   894→                      أقل من المتوسط بنسبة 20%
+   895→                    </p>
+   896→                    <Button
+   897→                      size="sm"
+   898→                      variant="outline"
+   899→                      className="h-7 text-xs border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853]"
+   900→                      onClick={() => handleSuggestion('price')}
+   901→                    >
+   902→                      تعديل السعر
+   903→                    </Button>
+   904→                  </div>
+   905→                ) : (
+   906→                  <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+   907→                    <p className="text-xs leading-relaxed text-white/30">
+   908→                      ✅ الأسعار مناسبة
+   909→                    </p>
+   910→                  </div>
+   911→                )}
+   912→
+   913→                {/* Suggestion 3: Non-featured dish */}
+   914→                {nonFeaturedDish ? (
+   915→                  <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+   916→                    <p className="mb-2 text-xs leading-relaxed text-white/60">
+   917→                      أنصح بجعل{' '}
+   918→                      <span className="font-semibold text-[#d4a853]">
+   919→                        {nonFeaturedDish.name}
+   920→                      </span>{' '}
+   921→                      مميزاً هذا الأسبوع
+   922→                    </p>
+   923→                    <Button
+   924→                      size="sm"
+   925→                      variant="outline"
+   926→                      className="h-7 text-xs border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853]"
+   927→                      onClick={() => handleSuggestion('feature')}
+   928→                    >
+   929→                      تمييز
+   930→                    </Button>
+   931→                  </div>
+   932→                ) : (
+   933→                  <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+   934→                    <p className="text-xs leading-relaxed text-white/30">
+   935→                      ✅ جميع الأطباق مميزة
+   936→                    </p>
+   937→                  </div>
+   938→                )}
+   939→              </CardContent>
+   940→            </Card>
+   941→          </aside>
+   942→        </div>
+   943→      </main>
+   944→
+   945→      {/* ══════════════ Add/Edit Dish Dialog ══════════════ */}
+   946→      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+   947→        <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[#12121a] sm:max-w-lg" dir="rtl">
+   948→          <DialogHeader>
+   949→            <DialogTitle className="text-base font-bold text-white">
+   950→              {editingDish ? 'تعديل الطبق' : 'إضافة طبق جديد'}
+   951→            </DialogTitle>
+   952→          </DialogHeader>
+   953→
+   954→          <div className="space-y-4 pt-2">
+   955→            {/* Dish Name */}
+   956→            <div className="space-y-1.5">
+   957→              <Label className="text-xs text-white/50">
+   958→                اسم الطبق <span className="text-red-400">*</span>
+   959→              </Label>
+   960→              <Input
+   961→                value={dishForm.name}
+   962→                onChange={(e) => setDishForm({ ...dishForm, name: e.target.value })}
+   963→                placeholder="أدخل اسم الطبق"
+   964→                className="border-white/10 bg-white/5 text-sm text-white placeholder:text-white/25 focus:border-[#d4a853]/50 focus:ring-[#d4a853]/20"
+   965→              />
+   966→            </div>
+   967→
+   968→            {/* Description */}
+   969→            <div className="space-y-1.5">
+   970→              <Label className="text-xs text-white/50">الوصف</Label>
+   971→              <Textarea
+   972→                value={dishForm.description}
+   973→                onChange={(e) =>
+   974→                  setDishForm({ ...dishForm, description: e.target.value })
+   975→                }
+   976→                placeholder="أدخل وصف الطبق..."
+   977→                rows={3}
+   978→                className="resize-none border-white/10 bg-white/5 text-sm leading-relaxed text-white/80 placeholder:text-white/25 focus:border-[#d4a853]/50 focus:ring-[#d4a853]/20"
+   979→              />
+   980→            </div>
+   981→
+   982→            {/* Price */}
+   983→            <div className="space-y-1.5">
+   984→              <Label className="text-xs text-white/50">السعر (ر.س)</Label>
+   985→              <div className="relative">
+   986→                <DollarSign className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/25" />
+   987→                <Input
+   988→                  type="number"
+   989→                  min={0}
+   990→                  value={dishForm.price || ''}
+   991→                  onChange={(e) =>
+   992→                    setDishForm({ ...dishForm, price: Number(e.target.value) || 0 })
+   993→                  }
+   994→                  placeholder="0"
+   995→                  className="border-white/10 bg-white/5 pr-9 text-sm text-white placeholder:text-white/25 focus:border-[#d4a853]/50 focus:ring-[#d4a853]/20"
+   996→                />
+   997→              </div>
+   998→            </div>
+   999→
+  1000→            {/* Category Select */}
+  1001→            <div className="space-y-1.5">
+  1002→              <Label className="text-xs text-white/50">التصنيف</Label>
+  1003→              <select
+  1004→                value={dishForm.categoryId}
+  1005→                onChange={(e) =>
+  1006→                  setDishForm({ ...dishForm, categoryId: e.target.value })
+  1007→                }
+  1008→                className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#d4a853]/50"
+  1009→              >
+  1010→                {categories.map((cat) => (
+  1011→                  <option key={cat.id} value={cat.id} className="bg-[#12121a]">
+  1012→                    {cat.name}
+  1013→                  </option>
+  1014→                ))}
+  1015→              </select>
+  1016→            </div>
+  1017→
+  1018→            <Separator className="bg-white/5" />
+  1019→
+  1020→            {/* Addons */}
+  1021→            <div className="space-y-2">
+  1022→              <div className="flex items-center justify-between">
+  1023→                <Label className="text-xs text-white/50">الإضافات</Label>
+  1024→                <Button
+  1025→                  type="button"
+  1026→                  variant="ghost"
+  1027→                  size="sm"
+  1028→                  className="h-7 gap-1 text-xs text-[#d4a853] hover:text-[#e0b965]"
+  1029→                  onClick={addFormAddon}
+  1030→                >
+  1031→                  <Plus className="h-3 w-3" />
+  1032→                  إضافة
+  1033→                </Button>
+  1034→              </div>
+  1035→
+  1036→              <AnimatePresence mode="popLayout">
+  1037→                {dishForm.addons.map((addon, idx) => (
+  1038→                  <motion.div
+  1039→                    key={idx}
+  1040→                    initial={{ opacity: 0, height: 0 }}
+  1041→                    animate={{ opacity: 1, height: 'auto' }}
+  1042→                    exit={{ opacity: 0, height: 0 }}
+  1043→                    className="flex items-end gap-2 overflow-hidden"
+  1044→                  >
+  1045→                    <div className="flex-1 space-y-1">
+  1046→                      {idx === 0 && (
+  1047→                        <span className="text-[10px] text-white/30">الاسم</span>
+  1048→                      )}
+  1049→                      <Input
+  1050→                        value={addon.name}
+  1051→                        onChange={(e) =>
+  1052→                          updateFormAddon(idx, 'name', e.target.value)
+  1053→                        }
+  1054→                        placeholder="اسم الإضافة"
+  1055→                        className="h-9 border-white/10 bg-white/5 text-xs text-white placeholder:text-white/20 focus:border-[#d4a853]/50"
+  1056→                      />
+  1057→                    </div>
+  1058→                    <div className="w-24 space-y-1">
+  1059→                      {idx === 0 && (
+  1060→                        <span className="text-[10px] text-white/30">السعر</span>
+  1061→                      )}
+  1062→                      <Input
+  1063→                        type="number"
+  1064→                        min={0}
+  1065→                        value={addon.price || ''}
+  1066→                        onChange={(e) =>
+  1067→                          updateFormAddon(idx, 'price', Number(e.target.value) || 0)
+  1068→                        }
+  1069→                        placeholder="0"
+  1070→                        className="h-9 border-white/10 bg-white/5 text-xs text-white placeholder:text-white/20 focus:border-[#d4a853]/50"
+  1071→                      />
+  1072→                    </div>
+  1073→                    <Button
+  1074→                      type="button"
+  1075→                      variant="ghost"
+  1076→                      size="icon"
+  1077→                      className="h-9 w-9 shrink-0 text-white/25 hover:text-red-400 hover:bg-white/5"
+  1078→                      onClick={() => removeFormAddon(idx)}
+  1079→                    >
+  1080→                      <X className="h-3.5 w-3.5" />
+  1081→                    </Button>
+  1082→                  </motion.div>
+  1083→                ))}
+  1084→              </AnimatePresence>
+  1085→
+  1086→              {dishForm.addons.length === 0 && (
+  1087→                <p className="text-center text-xs text-white/20 py-2">
+  1088→                  لا توجد إضافات — انقر &quot;إضافة&quot; لإضافة واحدة
+  1089→                </p>
+  1090→              )}
+  1091→            </div>
+  1092→
+  1093→            <Separator className="bg-white/5" />
+  1094→
+  1095→            {/* Toggles */}
+  1096→            <div className="flex items-center justify-between">
+  1097→              <Label className="text-sm text-white/70">مميز؟</Label>
+  1098→              <Switch
+  1099→                checked={dishForm.isFeatured}
+  1100→                onCheckedChange={(checked) =>
+  1101→                  setDishForm({ ...dishForm, isFeatured: checked })
+  1102→                }
+  1103→                className="data-[state=checked]:bg-[#d4a853]"
+  1104→              />
+  1105→            </div>
+  1106→            <div className="flex items-center justify-between">
+  1107→              <Label className="text-sm text-white/70">متاح؟</Label>
+  1108→              <Switch
+  1109→                checked={dishForm.isAvailable}
+  1110→                onCheckedChange={(checked) =>
+  1111→                  setDishForm({ ...dishForm, isAvailable: checked })
+  1112→                }
+  1113→                className="data-[state=checked]:bg-[#d4a853]"
+  1114→              />
+  1115→            </div>
+  1116→
+  1117→            <Separator className="bg-white/5" />
+  1118→
+  1119→            {/* Actions */}
+  1120→            <div className="flex gap-3 pt-1">
+  1121→              <Button
+  1122→                onClick={saveDish}
+  1123→                className="flex-1 gap-2 text-black font-semibold hover:bg-[#e0b965] transition-colors"
+  1124→                style={{ backgroundColor: '#d4a853' }}
+  1125→              >
+  1126→                <Save className="h-4 w-4" />
+  1127→                {editingDish ? 'حفظ التعديلات' : 'إضافة الطبق'}
+  1128→              </Button>
+  1129→              <Button
+  1130→                variant="outline"
+  1131→                onClick={() => setDialogOpen(false)}
+  1132→                className="border-white/10 text-white/60 hover:bg-white/5 hover:text-white"
+  1133→              >
+  1134→                إلغاء
+  1135→              </Button>
+  1136→            </div>
+  1137→          </div>
+  1138→        </DialogContent>
+  1139→      </Dialog>
+  1140→    </div>
+  1141→    </AuthGuard>
+  1142→  );
+  1143→}

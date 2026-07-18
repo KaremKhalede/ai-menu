@@ -17,13 +17,16 @@ import Checkout from '@/components/checkout';
 import CRMDashboard from '@/components/crm-dashboard';
 import AutoMenuGenerator from '@/components/auto-menu-generator';
 import HeatmapViewer from '@/components/heatmap-viewer';
+import { PWAInstallBanner, OfflineIndicator } from '@/components/pwa-prompt';
+import { initHeatmapTracking, stopHeatmapTracking } from '@/lib/heatmap-tracker';
+import { cacheMenu, getCachedMenu } from '@/lib/offline-db';
 
 export default function Home() {
   const { view, setCategories, showCheckout, cart } = useStore();
   const [cartOpen, setCartOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  // Fetch menu data on mount
+  // Fetch menu data on mount (with offline fallback)
   useEffect(() => {
     async function fetchMenu() {
       try {
@@ -31,9 +34,17 @@ export default function Home() {
         if (res.ok) {
           const data = await res.json();
           setCategories(data.categories);
+          // Cache menu for offline use
+          try { await cacheMenu(data.categories); } catch { /* cache fail silently */ }
         }
       } catch {
-        // If API fails, we use empty state
+        // Network failed — try IndexedDB cache
+        try {
+          const cached = await getCachedMenu();
+          if (cached) {
+            setCategories(cached as Parameters<typeof setCategories>[0]);
+          }
+        } catch { /* no cache available */ }
       } finally {
         setLoaded(true);
       }
@@ -46,8 +57,24 @@ export default function Home() {
     setCartOpen(false);
   }, [view]);
 
+  // Initialize heatmap tracking when on menu view
+  useEffect(() => {
+    if (view === 'menu') {
+      initHeatmapTracking();
+    }
+    return () => {
+      if (view === 'menu') {
+        stopHeatmapTracking();
+      }
+    };
+  }, [view]);
+
   return (
     <div className="min-h-screen bg-background">
+      {/* PWA Features */}
+      <OfflineIndicator />
+      <PWAInstallBanner />
+
       {/* Loading screen */}
       {!loaded && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">

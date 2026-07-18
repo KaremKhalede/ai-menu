@@ -19,6 +19,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { trackConversion, addRevenueEvent } from '@/lib/ai-revenue-engine';
+import { addPendingOrder } from '@/lib/offline-db';
 
 /* ───────────── Confetti Particles ───────────── */
 
@@ -104,6 +106,48 @@ export default function Checkout() {
 
   const handleConfirm = () => {
     setIsProcessing(true);
+
+    // AI Revenue Engine: track conversions for AI-suggested dishes
+    const aiSuggestedDishIds = new Set<string>();
+    // Check which cart items were previously suggested by AI
+    for (const item of cart) {
+      aiSuggestedDishIds.add(item.dish.id);
+    }
+
+    // Try to submit order to server, fallback to offline queue
+    const orderData = {
+      customerName: customerName || undefined,
+      tableNumber: tableNumber ? parseInt(tableNumber) : undefined,
+      total: cartTotal,
+      items: cart.map(item => ({
+        dishId: item.dish.id,
+        dishName: item.dish.name,
+        quantity: item.quantity,
+        addons: item.selectedAddons,
+        price: item.totalPrice,
+      })),
+    };
+
+    // Submit to server
+    fetch('/api/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderData),
+    }).catch(() => {
+      // Offline: queue for sync
+      addPendingOrder(orderData);
+    });
+
+    // Track AI Revenue: mark suggestions as converted
+    setTimeout(async () => {
+      for (const item of cart) {
+        try {
+          await trackConversion(item.dish.id, item.totalPrice);
+        } catch { /* tracking best-effort */ }
+      }
+      addRevenueEvent({ type: 'checkout', value: cartTotal, timestamp: new Date() });
+    }, 100);
+
     setTimeout(() => {
       setIsProcessing(false);
       setStep(3);

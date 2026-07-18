@@ -1,0 +1,886 @@
+     1→'use client';
+     2→
+     3→import { useState, useCallback } from 'react';
+     4→import { useStore } from '@/lib/store';
+     5→import type { Category, Dish } from '@/lib/types';
+     6→import { motion, AnimatePresence } from 'framer-motion';
+     7→import {
+     8→  Sparkles,
+     9→  ArrowRight,
+    10→  Eye,
+    11→  Pencil,
+    12→  RefreshCw,
+    13→  Plus,
+    14→  ChevronDown,
+    15→  ChevronUp,
+    16→  Check,
+    17→  X,
+    18→  Star,
+    19→  GripVertical,
+    20→  Save,
+    21→  UtensilsCrossed,
+    22→  Crown,
+    23→  CheckCircle2,
+    24→} from 'lucide-react';
+    25→import { Button } from '@/components/ui/button';
+    26→import { Input } from '@/components/ui/input';
+    27→import { Label } from '@/components/ui/label';
+    28→import { Slider } from '@/components/ui/slider';
+    29→import { Badge } from '@/components/ui/badge';
+    30→import { Textarea } from '@/components/ui/textarea';
+    31→
+    32→/* ───────────────────── Constants ───────────────────── */
+    33→
+    34→const CUISINES = [
+    35→  { value: 'أمريكي', label: 'أمريكي' },
+    36→  { value: 'سعودي', label: 'سعودي' },
+    37→  { value: 'إيطالي', label: 'إيطالي' },
+    38→  { value: 'ياباني', label: 'ياباني' },
+    39→  { value: 'هندي', label: 'هندي' },
+    40→  { value: 'تركي', label: 'تركي' },
+    41→  { value: 'عربي عام', label: 'عربي عام' },
+    42→  { value: 'مشويات', label: 'مشويات' },
+    43→  { value: 'حلويات', label: 'حلويات' },
+    44→  { value: 'متعدد', label: 'متعدد' },
+    45→];
+    46→
+    47→const PRICE_RANGES = [
+    48→  { value: 'budget', label: 'اقتصادي', range: '5-25 ر.س', icon: '💰' },
+    49→  { value: 'medium', label: 'متوسط', range: '20-60 ر.س', icon: '💳' },
+    50→  { value: 'premium', label: 'فاخر', range: '50-120 ر.س', icon: '✨' },
+    51→  { value: 'luxury', label: 'بريميوم', range: '100-300+ ر.س', icon: '👑' },
+    52→] as const;
+    53→
+    54→type Step = 'input' | 'preview' | 'success';
+    55→
+    56→/* ───────────────────── Animation Variants ───────────────────── */
+    57→
+    58→const fadeUp = {
+    59→  hidden: { opacity: 0, y: 20 },
+    60→  visible: (i: number) => ({
+    61→    opacity: 1,
+    62→    y: 0,
+    63→    transition: { delay: i * 0.06, duration: 0.4, ease: 'easeOut' as const },
+    64→  }),
+    65→};
+    66→
+    67→const staggerContainer = {
+    68→  hidden: {},
+    69→  visible: { transition: { staggerChildren: 0.06 } },
+    70→};
+    71→
+    72→const scaleIn = {
+    73→  hidden: { opacity: 0, scale: 0.9 },
+    74→  visible: { opacity: 1, scale: 1, transition: { duration: 0.4 } },
+    75→  exit: { opacity: 0, scale: 0.9, transition: { duration: 0.3 } },
+    76→};
+    77→
+    78→const successPop = {
+    79→  hidden: { opacity: 0, scale: 0.5 },
+    80→  visible: {
+    81→    opacity: 1,
+    82→    scale: 1,
+    83→    transition: { type: 'spring' as const, stiffness: 200, damping: 15, delay: 0.2 },
+    84→  },
+    85→};
+    86→
+    87→/* ───────────────────── Component ───────────────────── */
+    88→
+    89→export default function AutoMenuGenerator() {
+    90→  const { setCategories, setView } = useStore();
+    91→
+    92→  // Form state
+    93→  const [restaurantType, setRestaurantType] = useState('');
+    94→  const [cuisine, setCuisine] = useState('سعودي');
+    95→  const [priceRange, setPriceRange] = useState<'budget' | 'medium' | 'premium' | 'luxury'>('medium');
+    96→  const [numCategories, setNumCategories] = useState(5);
+    97→
+    98→  // Flow state
+    99→  const [step, setStep] = useState<Step>('input');
+   100→  const [loading, setLoading] = useState(false);
+   101→  const [error, setError] = useState('');
+   102→
+   103→  // Generated data
+   104→  const [restaurantName, setRestaurantName] = useState('');
+   105→  const [categories, setLocalCategories] = useState<Category[]>([]);
+   106→  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+   107→  const [editingDish, setEditingDish] = useState<string | null>(null);
+   108→
+   109→  // Success summary
+   110→  const [totalDishes, setTotalDishes] = useState(0);
+   111→
+   112→  /* ─── Toggle category expand ─── */
+   113→  const toggleCategory = useCallback((catId: string) => {
+   114→    setExpandedCategories((prev) => {
+   115→      const next = new Set(prev);
+   116→      if (next.has(catId)) next.delete(catId);
+   117→      else next.add(catId);
+   118→      return next;
+   119→    });
+   120→  }, []);
+   121→
+   122→  /* ─── Expand all ─── */
+   123→  const expandAll = useCallback(() => {
+   124→    setExpandedCategories(new Set(categories.map((c) => c.id)));
+   125→  }, [categories]);
+   126→
+   127→  /* ─── Collapse all ─── */
+   128→  const collapseAll = useCallback(() => {
+   129→    setExpandedCategories(new Set());
+   130→  }, []);
+   131→
+   132→  /* ─── Generate menu ─── */
+   133→  const handleGenerate = async () => {
+   134→    if (!restaurantType.trim()) {
+   135→      setError('يرجى كتابة نوع المطعم');
+   136→      return;
+   137→    }
+   138→    setError('');
+   139→    setLoading(true);
+   140→
+   141→    try {
+   142→      const res = await fetch('/api/ai/generate-menu', {
+   143→        method: 'POST',
+   144→        headers: { 'Content-Type': 'application/json' },
+   145→        body: JSON.stringify({
+   146→          restaurantType: restaurantType.trim(),
+   147→          cuisine,
+   148→          priceRange,
+   149→          numberOfCategories: numCategories,
+   150→          dishesPerCategory: 4,
+   151→          currency: 'ر.س',
+   152→          language: 'ar',
+   153→          specialRequirements: '',
+   154→        }),
+   155→      });
+   156→
+   157→      if (!res.ok) {
+   158→        throw new Error('فشل في توليد القائمة');
+   159→      }
+   160→
+   161→      const data = await res.json();
+   162→
+   163→      if (data.categories && data.categories.length > 0) {
+   164→        setRestaurantName(data.restaurantName || restaurantType);
+   165→        setLocalCategories(data.categories);
+   166→        // Expand first category
+   167→        setExpandedCategories(new Set([data.categories[0].id]));
+   168→        setTotalDishes(data.categories.reduce((sum: number, cat: Category) => sum + cat.dishes.length, 0));
+   169→        setStep('preview');
+   170→      } else {
+   171→        throw new Error('لم يتم توليد بيانات صالحة');
+   172→      }
+   173→    } catch (err) {
+   174→      console.error(err);
+   175→      setError('حدث خطأ أثناء التوليد. يرجى المحاولة مرة أخرى.');
+   176→    } finally {
+   177→      setLoading(false);
+   178→    }
+   179→  };
+   180→
+   181→  /* ─── Update dish field ─── */
+   182→  const updateDish = (catId: string, dishId: string, field: keyof Dish, value: unknown) => {
+   183→    setLocalCategories((prev) =>
+   184→      prev.map((cat) => {
+   185→        if (cat.id !== catId) return cat;
+   186→        return {
+   187→          ...cat,
+   188→          dishes: cat.dishes.map((dish) => {
+   189→            if (dish.id !== dishId) return dish;
+   190→            return { ...dish, [field]: value };
+   191→          }),
+   192→        };
+   193→      })
+   194→    );
+   195→  };
+   196→
+   197→  /* ─── Add empty dish to category ─── */
+   198→  const addDish = (catId: string) => {
+   199→    const newDish: Dish = {
+   200→      id: crypto.randomUUID(),
+   201→      name: 'طبق جديد',
+   202→      nameEn: 'New Dish',
+   203→      description: 'وصف الطبق الجديد هنا',
+   204→      price: 0,
+   205→      categoryId: catId,
+   206→      rating: 4.0,
+   207→      orderCount: 0,
+   208→      tags: ['جديد'],
+   209→      isAvailable: true,
+   210→      isFeatured: false,
+   211→      addons: [{ name: 'إضافة 1', price: 3 }],
+   212→      pairings: ['مشروب مناسب'],
+   213→    };
+   214→    setLocalCategories((prev) =>
+   215→      prev.map((cat) => {
+   216→        if (cat.id !== catId) return cat;
+   217→        return { ...cat, dishes: [...cat.dishes, newDish] };
+   218→      })
+   219→    );
+   220→    setEditingDish(newDish.id);
+   221→    setExpandedCategories((prev) => new Set(prev).add(catId));
+   222→  };
+   223→
+   224→  /* ─── Save menu to store ─── */
+   225→  const handleSave = () => {
+   226→    setCategories(categories);
+   227→    setStep('success');
+   228→  };
+   229→
+   230→  /* ─── Regenerate ─── */
+   231→  const handleRegenerate = () => {
+   232→    setStep('input');
+   233→  };
+   234→
+   235→  /* ═══════════════════════════════════════════════════════════════
+   236→     Step 1: Input Form
+   237→     ═══════════════════════════════════════════════════════════════ */
+   238→
+   239→  function StepInput() {
+   240→    return (
+   241→      <div className="min-h-screen bg-[#0a0a0f] text-[#f0ece4]">
+   242→        {/* Header */}
+   243→        <div className="sticky top-0 z-30 backdrop-blur-xl bg-[#0a0a0f]/80 border-b border-white/[0.06]">
+   244→          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
+   245→            <Button
+   246→              variant="ghost"
+   247→              size="icon"
+   248→              className="text-muted-foreground hover:text-foreground"
+   249→              onClick={() => setView('dashboard')}
+   250→            >
+   251→              <ArrowRight className="h-5 w-5" />
+   252→            </Button>
+   253→            <div className="flex items-center gap-3 flex-1">
+   254→              <div className="h-10 w-10 rounded-xl gold-gradient flex items-center justify-center">
+   255→                <Sparkles className="h-5 w-5 text-[#0a0a0f]" />
+   256→              </div>
+   257→              <div>
+   258→                <h1 className="text-lg sm:text-xl font-bold gold-gradient-text">
+   259→                  مولّد القائمة بالذكاء الاصطناعي
+   260→                </h1>
+   261→                <p className="text-xs text-[#8a8578]">أنشئ قائمة كاملة في ثوانٍ</p>
+   262→              </div>
+   263→            </div>
+   264→          </div>
+   265→        </div>
+   266→
+   267→        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+   268→          {/* Hero Section */}
+   269→          <motion.div
+   270→            initial={{ opacity: 0, y: 16 }}
+   271→            animate={{ opacity: 1, y: 0 }}
+   272→            className="text-center space-y-3 py-4"
+   273→          >
+   274→            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-[#d4a853]/10 border border-[#d4a853]/20 mb-2">
+   275→              <Sparkles className="h-10 w-10 text-[#d4a853]" />
+   276→            </div>
+   277→            <h2 className="text-2xl sm:text-3xl font-bold">
+   278→              <span className="gold-gradient-text">وصّف مطعمك</span> ونحن نبني القائمة
+   279→            </h2>
+   280→            <p className="text-[#8a8578] text-sm max-w-md mx-auto">
+   281→              أدخل نوع مطعمك واختر التفاصيل، وسيقوم الذكاء الاصطناعي بتوليد قائمة طعام كاملة بأسماء وأوصاف وأسعار احترافية
+   282→            </p>
+   283→          </motion.div>
+   284→
+   285→          {/* Restaurant Type */}
+   286→          <motion.div
+   287→            initial={{ opacity: 0, y: 16 }}
+   288→            animate={{ opacity: 1, y: 0 }}
+   289→            transition={{ delay: 0.1 }}
+   290→            className="space-y-3"
+   291→          >
+   292→            <Label className="text-[#f0ece4] text-sm font-semibold">نوع المطعم</Label>
+   293→            <Input
+   294→              value={restaurantType}
+   295→              onChange={(e) => { setRestaurantType(e.target.value); setError(''); }}
+   296→              placeholder="مثال: مطعم برجر، كافيه، مطعم سعودي..."
+   297→              className="h-12 bg-[#12121a] border-[#d4a853]/20 text-base placeholder:text-[#8a8578]/60 focus-visible:border-[#d4a853] focus-visible:ring-[#d4a853]/20"
+   298→              dir="rtl"
+   299→            />
+   300→          </motion.div>
+   301→
+   302→          {/* Cuisine */}
+   303→          <motion.div
+   304→            initial={{ opacity: 0, y: 16 }}
+   305→            animate={{ opacity: 1, y: 0 }}
+   306→            transition={{ delay: 0.15 }}
+   307→            className="space-y-3"
+   308→          >
+   309→            <Label className="text-[#f0ece4] text-sm font-semibold">نوع المطبخ</Label>
+   310→            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+   311→              {CUISINES.map((c) => (
+   312→                <button
+   313→                  key={c.value}
+   314→                  onClick={() => setCuisine(c.value)}
+   315→                  className={`py-2.5 px-3 rounded-xl text-sm font-medium transition-all border ${
+   316→                    cuisine === c.value
+   317→                      ? 'bg-[#d4a853]/15 border-[#d4a853] text-[#d4a853]'
+   318→                      : 'bg-[#12121a] border-white/[0.06] text-[#8a8578] hover:border-[#d4a853]/30 hover:text-[#f0ece4]'
+   319→                  }`}
+   320→                >
+   321→                  {c.label}
+   322→                </button>
+   323→              ))}
+   324→            </div>
+   325→          </motion.div>
+   326→
+   327→          {/* Price Range */}
+   328→          <motion.div
+   329→            initial={{ opacity: 0, y: 16 }}
+   330→            animate={{ opacity: 1, y: 0 }}
+   331→            transition={{ delay: 0.2 }}
+   332→            className="space-y-3"
+   333→          >
+   334→            <Label className="text-[#f0ece4] text-sm font-semibold">مستوى الأسعار</Label>
+   335→            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   336→              {PRICE_RANGES.map((pr) => (
+   337→                <button
+   338→                  key={pr.value}
+   339→                  onClick={() => setPriceRange(pr.value)}
+   340→                  className={`relative p-4 rounded-2xl text-center transition-all border ${
+   341→                    priceRange === pr.value
+   342→                      ? 'bg-[#d4a853]/10 border-[#d4a853] shadow-lg shadow-[#d4a853]/10'
+   343→                      : 'bg-[#12121a] border-white/[0.06] hover:border-[#d4a853]/20'
+   344→                  }`}
+   345→                >
+   346→                  <div className="text-2xl mb-2">{pr.icon}</div>
+   347→                  <div className={`text-sm font-bold ${priceRange === pr.value ? 'text-[#d4a853]' : 'text-[#f0ece4]'}`}>
+   348→                    {pr.label}
+   349→                  </div>
+   350→                  <div className="text-[10px] text-[#8a8578] mt-1">{pr.range}</div>
+   351→                  {priceRange === pr.value && (
+   352→                    <div className="absolute top-2 left-2">
+   353→                      <Check className="h-3.5 w-3.5 text-[#d4a853]" />
+   354→                    </div>
+   355→                  )}
+   356→                </button>
+   357→              ))}
+   358→            </div>
+   359→          </motion.div>
+   360→
+   361→          {/* Number of Categories */}
+   362→          <motion.div
+   363→            initial={{ opacity: 0, y: 16 }}
+   364→            animate={{ opacity: 1, y: 0 }}
+   365→            transition={{ delay: 0.25 }}
+   366→            className="space-y-4"
+   367→          >
+   368→            <div className="flex items-center justify-between">
+   369→              <Label className="text-[#f0ece4] text-sm font-semibold">عدد الأقسام</Label>
+   370→              <span className="text-lg font-bold gold-gradient-text">{numCategories}</span>
+   371→            </div>
+   372→            <Slider
+   373→              value={[numCategories]}
+   374→              onValueChange={(v) => setNumCategories(v[0])}
+   375→              min={3}
+   376→              max={8}
+   377→              step={1}
+   378→              className="w-full"
+   379→            />
+   380→            <div className="flex justify-between text-[10px] text-[#8a8578]">
+   381→              <span>3 أقسام</span>
+   382→              <span>8 أقسام</span>
+   383→            </div>
+   384→          </motion.div>
+   385→
+   386→          {/* Error */}
+   387→          <AnimatePresence>
+   388→            {error && (
+   389→              <motion.div
+   390→                initial={{ opacity: 0, y: -8 }}
+   391→                animate={{ opacity: 1, y: 0 }}
+   392→                exit={{ opacity: 0, y: -8 }}
+   393→                className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm text-center"
+   394→              >
+   395→                {error}
+   396→              </motion.div>
+   397→            )}
+   398→          </AnimatePresence>
+   399→
+   400→          {/* Generate Button */}
+   401→          <motion.div
+   402→            initial={{ opacity: 0, y: 16 }}
+   403→            animate={{ opacity: 1, y: 0 }}
+   404→            transition={{ delay: 0.3 }}
+   405→            className="pt-4"
+   406→          >
+   407→            {loading ? (
+   408→              <div className="flex flex-col items-center gap-6 py-10">
+   409→                <div className="text-center">
+   410→                  <div className="gold-gradient-text text-2xl font-black mb-3">MenuAI</div>
+   411→                  <p className="text-[#8a8578] text-sm">جارٍ توليد القائمة...</p>
+   412→                  <p className="text-[#8a8578]/60 text-xs mt-1">يستغرق عادةً 5-10 ثوانٍ</p>
+   413→                </div>
+   414→                <div className="flex items-center justify-center gap-1.5 h-10">
+   415→                  {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+   416→                    <div
+   417→                      key={i}
+   418→                      className="voice-wave-bar"
+   419→                      style={{
+   420→                        animationDelay: `${i * 0.12}s`,
+   421→                        height: '8px',
+   422→                      }}
+   423→                    />
+   424→                  ))}
+   425→                </div>
+   426→              </div>
+   427→            ) : (
+   428→              <Button
+   429→                onClick={handleGenerate}
+   430→                className="w-full h-14 text-base font-bold gold-gradient hover:opacity-90 rounded-2xl gap-3"
+   431→              >
+   432→                <Sparkles className="h-5 w-5" />
+   433→                توليد القائمة بالذكاء الاصطناعي
+   434→              </Button>
+   435→            )}
+   436→          </motion.div>
+   437→        </div>
+   438→      </div>
+   439→    );
+   440→  }
+   441→
+   442→  /* ═══════════════════════════════════════════════════════════════
+   443→     Step 2: Preview & Edit
+   444→     ═══════════════════════════════════════════════════════════════ */
+   445→
+   446→  function StepPreview() {
+   447→    return (
+   448→      <div className="min-h-screen bg-[#0a0a0f] text-[#f0ece4]">
+   449→        {/* Header */}
+   450→        <div className="sticky top-0 z-30 backdrop-blur-xl bg-[#0a0a0f]/80 border-b border-white/[0.06]">
+   451→          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+   452→            <div className="flex items-center gap-3">
+   453→              <Button
+   454→                variant="ghost"
+   455→                size="icon"
+   456→                className="text-muted-foreground hover:text-foreground"
+   457→                onClick={() => setStep('input')}
+   458→              >
+   459→                <ArrowRight className="h-5 w-5" />
+   460→              </Button>
+   461→              <div>
+   462→                <h1 className="text-lg font-bold gold-gradient-text">{restaurantName}</h1>
+   463→                <p className="text-xs text-[#8a8578]">{categories.length} قسم · {totalDishes} طبق</p>
+   464→              </div>
+   465→            </div>
+   466→            <div className="flex items-center gap-2">
+   467→              <Button variant="ghost" size="sm" onClick={expandAll} className="text-xs text-[#8a8578] hover:text-[#f0ece4]">
+   468→                توسيع الكل
+   469→              </Button>
+   470→              <Button variant="ghost" size="sm" onClick={collapseAll} className="text-xs text-[#8a8578] hover:text-[#f0ece4]">
+   471→                طي الكل
+   472→              </Button>
+   473→            </div>
+   474→          </div>
+   475→        </div>
+   476→
+   477→        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+   478→          {/* Categories */}
+   479→          <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-4">
+   480→            {categories.map((cat, catIdx) => {
+   481→              const isExpanded = expandedCategories.has(cat.id);
+   482→              return (
+   483→                <motion.div
+   484→                  key={cat.id}
+   485→                  custom={catIdx}
+   486→                  variants={fadeUp}
+   487→                  className="glass-card overflow-hidden"
+   488→                >
+   489→                  {/* Category Header */}
+   490→                  <button
+   491→                    onClick={() => toggleCategory(cat.id)}
+   492→                    className="w-full flex items-center justify-between p-4 sm:p-5 hover:bg-white/[0.02] transition-colors"
+   493→                  >
+   494→                    <div className="flex items-center gap-3">
+   495→                      <GripVertical className="h-4 w-4 text-[#8a8578]/50 shrink-0" />
+   496→                      <span className="text-2xl">{cat.icon || '🍽️'}</span>
+   497→                      <div className="text-right">
+   498→                        <h3 className="font-bold text-base text-[#f0ece4]">{cat.name}</h3>
+   499→                        {cat.nameEn && (
+   500→                          <p className="text-[10px] text-[#8a8578]">{cat.nameEn}</p>
+   501→                        )}
+   502→                      </div>
+   503→                      <Badge variant="secondary" className="bg-[#d4a853]/10 text-[#d4a853] text-[10px] mr-2">
+   504→                        {cat.dishes.length} طبق
+   505→                      </Badge>
+   506→                    </div>
+   507→                    <div className="flex items-center gap-2">
+   508→                      <button
+   509→                        onClick={(e) => { e.stopPropagation(); addDish(cat.id); }}
+   510→                        className="h-7 w-7 rounded-lg bg-[#d4a853]/10 flex items-center justify-center text-[#d4a853] hover:bg-[#d4a853]/20 transition-colors"
+   511→                      >
+   512→                        <Plus className="h-3.5 w-3.5" />
+   513→                      </button>
+   514→                      {isExpanded ? (
+   515→                        <ChevronUp className="h-4 w-4 text-[#8a8578]" />
+   516→                      ) : (
+   517→                        <ChevronDown className="h-4 w-4 text-[#8a8578]" />
+   518→                      )}
+   519→                    </div>
+   520→                  </button>
+   521→
+   522→                  {/* Category Dishes */}
+   523→                  <AnimatePresence>
+   524→                    {isExpanded && (
+   525→                      <motion.div
+   526→                        initial={{ height: 0, opacity: 0 }}
+   527→                        animate={{ height: 'auto', opacity: 1 }}
+   528→                        exit={{ height: 0, opacity: 0 }}
+   529→                        transition={{ duration: 0.3 }}
+   530→                        className="overflow-hidden"
+   531→                      >
+   532→                        <div className="px-4 sm:px-5 pb-4 space-y-3">
+   533→                          {cat.dishes.map((dish, dishIdx) => (
+   534→                            <DishCard
+   535→                              key={dish.id}
+   536→                              dish={dish}
+   537→                              isEditing={editingDish === dish.id}
+   538→                              onEdit={() => setEditingDish(editingDish === dish.id ? null : dish.id)}
+   539→                              onUpdate={(field, value) => updateDish(cat.id, dish.id, field, value)}
+   540→                              index={dishIdx}
+   541→                            />
+   542→                          ))}
+   543→                        </div>
+   544→                      </motion.div>
+   545→                    )}
+   546→                  </AnimatePresence>
+   547→                </motion.div>
+   548→              );
+   549→            })}
+   550→          </motion.div>
+   551→
+   552→          {/* Action Buttons */}
+   553→          <motion.div
+   554→            initial={{ opacity: 0, y: 20 }}
+   555→            animate={{ opacity: 1, y: 0 }}
+   556→            transition={{ delay: 0.4 }}
+   557→            className="sticky bottom-0 bg-gradient-to-t from-[#0a0a0f] via-[#0a0a0f] to-transparent pt-6 pb-6 -mx-4 px-4 sm:px-6"
+   558→          >
+   559→            <div className="max-w-4xl mx-auto flex flex-col sm:flex-row gap-3">
+   560→              <Button
+   561→                onClick={handleSave}
+   562→                className="flex-1 h-12 text-base font-bold gold-gradient hover:opacity-90 rounded-xl gap-2"
+   563→              >
+   564→                <Save className="h-5 w-5" />
+   565→                حفظ القائمة
+   566→              </Button>
+   567→              <Button
+   568→                variant="outline"
+   569→                onClick={handleRegenerate}
+   570→                className="flex-1 h-12 text-base font-semibold rounded-xl gap-2 border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853]"
+   571→              >
+   572→                <RefreshCw className="h-4 w-4" />
+   573→                إعادة توليد
+   574→              </Button>
+   575→            </div>
+   576→          </motion.div>
+   577→        </div>
+   578→      </div>
+   579→    );
+   580→  }
+   581→
+   582→  /* ═══════════════════════════════════════════════════════════════
+   583→     Dish Card Sub-component
+   584→     ═══════════════════════════════════════════════════════════════ */
+   585→
+   586→  function DishCard({
+   587→    dish,
+   588→    isEditing,
+   589→    onEdit,
+   590→    onUpdate,
+   591→    index,
+   592→  }: {
+   593→    dish: Dish;
+   594→    isEditing: boolean;
+   595→    onEdit: () => void;
+   596→    onUpdate: (field: keyof Dish, value: unknown) => void;
+   597→    index: number;
+   598→  }) {
+   599→    return (
+   600→      <motion.div
+   601→        custom={index}
+   602→        variants={fadeUp}
+   603→        className={`relative rounded-xl border transition-all ${
+   604→          dish.isFeatured
+   605→            ? 'bg-[#d4a853]/[0.04] border-[#d4a853]/20'
+   606→            : 'bg-white/[0.02] border-white/[0.06]'
+   607→        } ${isEditing ? 'ring-1 ring-[#d4a853]/40' : ''}`}
+   608→      >
+   609→        {/* Drag handle + Featured badge row */}
+   610→        <div className="flex items-start gap-3 p-4">
+   611→          <GripVertical className="h-4 w-4 text-[#8a8578]/40 mt-1 shrink-0 cursor-grab" />
+   612→
+   613→          <div className="flex-1 min-w-0 space-y-2">
+   614→            {/* Top row: name + price + badges */}
+   615→            <div className="flex items-start justify-between gap-3">
+   616→              <div className="flex-1 min-w-0">
+   617→                {isEditing ? (
+   618→                  <Input
+   619→                    value={dish.name}
+   620→                    onChange={(e) => onUpdate('name', e.target.value)}
+   621→                    className="h-9 bg-[#0a0a0f] border-[#d4a853]/30 text-sm mb-2"
+   622→                    dir="rtl"
+   623→                  />
+   624→                ) : (
+   625→                  <h4 className="font-bold text-sm text-[#f0ece4] truncate">{dish.name}</h4>
+   626→                )}
+   627→                {dish.nameEn && !isEditing && (
+   628→                  <p className="text-[10px] text-[#8a8578]">{dish.nameEn}</p>
+   629→                )}
+   630→              </div>
+   631→
+   632→              <div className="flex items-center gap-2 shrink-0">
+   633→                {dish.isFeatured && (
+   634→                  <Badge className="bg-[#d4a853]/20 text-[#d4a853] border-[#d4a853]/30 text-[10px] gap-1">
+   635→                    <Crown className="h-3 w-3" />
+   636→                    مميز
+   637→                  </Badge>
+   638→                )}
+   639→                <div className="flex items-center gap-1 text-[#d4a853]">
+   640→                  <Star className="h-3 w-3 fill-[#d4a853]" />
+   641→                  <span className="text-xs font-semibold">{dish.rating}</span>
+   642→                </div>
+   643→                {isEditing ? (
+   644→                  <Input
+   645→                    type="number"
+   646→                    value={dish.price}
+   647→                    onChange={(e) => onUpdate('price', parseFloat(e.target.value) || 0)}
+   648→                    className="w-20 h-8 bg-[#0a0a0f] border-[#d4a853]/30 text-xs text-left text-[#d4a853]"
+   649→                    dir="ltr"
+   650→                  />
+   651→                ) : (
+   652→                  <span className="text-base font-bold text-[#d4a853]">{dish.price} ر.س</span>
+   653→                )}
+   654→              </div>
+   655→            </div>
+   656→
+   657→            {/* Description */}
+   658→            {isEditing ? (
+   659→              <Textarea
+   660→                value={dish.description}
+   661→                onChange={(e) => onUpdate('description', e.target.value)}
+   662→                className="h-16 bg-[#0a0a0f] border-[#d4a853]/30 text-xs resize-none"
+   663→                dir="rtl"
+   664→              />
+   665→            ) : (
+   666→              <p className="text-xs text-[#8a8578] leading-relaxed line-clamp-2">{dish.description}</p>
+   667→            )}
+   668→
+   669→            {/* Tags */}
+   670→            {dish.tags.length > 0 && !isEditing && (
+   671→              <div className="flex flex-wrap gap-1.5 mt-1">
+   672→                {dish.tags.map((tag) => (
+   673→                  <span
+   674→                    key={tag}
+   675→                    className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] text-[#8a8578]"
+   676→                  >
+   677→                    {tag}
+   678→                  </span>
+   679→                ))}
+   680→              </div>
+   681→            )}
+   682→
+   683→            {/* Addons & Pairings (collapsed) */}
+   684→            {!isEditing && (
+   685→              <div className="flex flex-wrap gap-3 mt-2 text-[10px] text-[#8a8578]/70">
+   686→                {dish.addons.length > 0 && (
+   687→                  <span>+{dish.addons.length} إضافات</span>
+   688→                )}
+   689→                {dish.pairings.length > 0 && (
+   690→                  <span>{dish.pairings.length} اقتراحات تقديم</span>
+   691→                )}
+   692→              </div>
+   693→            )}
+   694→
+   695→            {/* Edit mode: addons & pairings detail */}
+   696→            {isEditing && (
+   697→              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2 pt-2 border-t border-white/[0.06]">
+   698→                <div className="space-y-1">
+   699→                  <p className="text-[10px] text-[#8a8578] font-semibold">الإضافات</p>
+   700→                  {dish.addons.map((addon, ai) => (
+   701→                    <div key={ai} className="flex gap-2 items-center">
+   702→                      <Input
+   703→                        value={addon.name}
+   704→                        onChange={(e) => {
+   705→                          const newAddons = [...dish.addons];
+   706→                          newAddons[ai] = { ...addon, name: e.target.value };
+   707→                          onUpdate('addons', newAddons);
+   708→                        }}
+   709→                        className="h-7 bg-[#0a0a0f] border-white/[0.06] text-[10px]"
+   710→                        dir="rtl"
+   711→                        placeholder="اسم الإضافة"
+   712→                      />
+   713→                      <Input
+   714→                        type="number"
+   715→                        value={addon.price}
+   716→                        onChange={(e) => {
+   717→                          const newAddons = [...dish.addons];
+   718→                          newAddons[ai] = { ...addon, price: parseFloat(e.target.value) || 0 };
+   719→                          onUpdate('addons', newAddons);
+   720→                        }}
+   721→                        className="w-16 h-7 bg-[#0a0a0f] border-white/[0.06] text-[10px] text-left"
+   722→                        dir="ltr"
+   723→                        placeholder="السعر"
+   724→                      />
+   725→                    </div>
+   726→                  ))}
+   727→                </div>
+   728→                <div className="space-y-1">
+   729→                  <p className="text-[10px] text-[#8a8578] font-semibold">اقتراحات التقديم</p>
+   730→                  {dish.pairings.map((pairing, pi) => (
+   731→                    <Input
+   732→                      key={pi}
+   733→                      value={pairing}
+   734→                      onChange={(e) => {
+   735→                        const newPairings = [...dish.pairings];
+   736→                        newPairings[pi] = e.target.value;
+   737→                        onUpdate('pairings', newPairings);
+   738→                      }}
+   739→                      className="h-7 bg-[#0a0a0f] border-white/[0.06] text-[10px]"
+   740→                      dir="rtl"
+   741→                    />
+   742→                  ))}
+   743→                </div>
+   744→              </div>
+   745→            )}
+   746→          </div>
+   747→
+   748→          {/* Edit button */}
+   749→          <button
+   750→            onClick={onEdit}
+   751→            className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+   752→              isEditing
+   753→                ? 'bg-[#d4a853]/20 text-[#d4a853]'
+   754→                : 'bg-white/[0.05] text-[#8a8578] hover:text-[#f0ece4] hover:bg-white/[0.08]'
+   755→            }`}
+   756→          >
+   757→            {isEditing ? <Check className="h-4 w-4" /> : <Pencil className="h-3.5 w-3.5" />}
+   758→          </button>
+   759→        </div>
+   760→      </motion.div>
+   761→    );
+   762→  }
+   763→
+   764→  /* ═══════════════════════════════════════════════════════════════
+   765→     Step 3: Success
+   766→     ═══════════════════════════════════════════════════════════════ */
+   767→
+   768→  function StepSuccess() {
+   769→    return (
+   770→      <div className="min-h-screen bg-[#0a0a0f] text-[#f0ece4] flex items-center justify-center p-6">
+   771→        <motion.div
+   772→          variants={scaleIn}
+   773→          initial="hidden"
+   774→          animate="visible"
+   775→          className="max-w-md w-full text-center space-y-8"
+   776→        >
+   777→          {/* Success Icon */}
+   778→          <motion.div variants={successPop} className="flex justify-center">
+   779→            <div className="relative">
+   780→              <div className="w-24 h-24 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center">
+   781→                <CheckCircle2 className="h-12 w-12 text-emerald-400" />
+   782→              </div>
+   783→              <motion.div
+   784→                initial={{ scale: 0 }}
+   785→                animate={{ scale: 1 }}
+   786→                transition={{ delay: 0.6, type: 'spring', stiffness: 200 }}
+   787→                className="absolute -top-1 -right-1 w-8 h-8 rounded-full gold-gradient flex items-center justify-center"
+   788→              >
+   789→                <Sparkles className="h-4 w-4 text-[#0a0a0f]" />
+   790→              </motion.div>
+   791→            </div>
+   792→          </motion.div>
+   793→
+   794→          {/* Text */}
+   795→          <motion.div
+   796→            initial={{ opacity: 0, y: 12 }}
+   797→            animate={{ opacity: 1, y: 0 }}
+   798→            transition={{ delay: 0.4 }}
+   799→            className="space-y-3"
+   800→          >
+   801→            <h2 className="text-2xl sm:text-3xl font-bold">
+   802→              تم إنشاء القائمة <span className="gold-gradient-text">بنجاح!</span>
+   803→            </h2>
+   804→            <p className="text-[#8a8578] text-sm">
+   805→              تم توليد قائمة طعام كاملة لمطعمك باستخدام الذكاء الاصطناعي
+   806→            </p>
+   807→          </motion.div>
+   808→
+   809→          {/* Stats */}
+   810→          <motion.div
+   811→            initial={{ opacity: 0, y: 12 }}
+   812→            animate={{ opacity: 1, y: 0 }}
+   813→            transition={{ delay: 0.55 }}
+   814→            className="grid grid-cols-2 gap-4"
+   815→          >
+   816→            <div className="glass-card p-4 space-y-1">
+   817→              <p className="text-3xl font-bold gold-gradient-text">{categories.length}</p>
+   818→              <p className="text-xs text-[#8a8578]">قسم</p>
+   819→            </div>
+   820→            <div className="glass-card p-4 space-y-1">
+   821→              <p className="text-3xl font-bold gold-gradient-text">{totalDishes}</p>
+   822→              <p className="text-xs text-[#8a8578]">طبق</p>
+   823→            </div>
+   824→          </motion.div>
+   825→
+   826→          {/* Actions */}
+   827→          <motion.div
+   828→            initial={{ opacity: 0, y: 12 }}
+   829→            animate={{ opacity: 1, y: 0 }}
+   830→            transition={{ delay: 0.7 }}
+   831→            className="space-y-3"
+   832→          >
+   833→            <Button
+   834→              onClick={() => setView('menu')}
+   835→              className="w-full h-12 text-base font-bold gold-gradient hover:opacity-90 rounded-xl gap-2"
+   836→            >
+   837→              <Eye className="h-5 w-5" />
+   838→              معاينة المنيو
+   839→            </Button>
+   840→            <Button
+   841→              variant="outline"
+   842→              onClick={() => setView('menu-editor')}
+   843→              className="w-full h-12 text-base font-semibold rounded-xl gap-2 border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853]"
+   844→            >
+   845→              <Pencil className="h-4 w-4" />
+   846→              تعديل متقدم
+   847→            </Button>
+   848→            <Button
+   849→              variant="ghost"
+   850→              onClick={() => setView('dashboard')}
+   851→              className="w-full text-[#8a8578] hover:text-[#f0ece4]"
+   852→            >
+   853→              العودة للوحة التحكم
+   854→            </Button>
+   855→          </motion.div>
+   856→        </motion.div>
+   857→      </div>
+   858→    );
+   859→  }
+   860→
+   861→  /* ═══════════════════════════════════════════════════════════════
+   862→     Main Render
+   863→     ═══════════════════════════════════════════════════════════════ */
+   864→
+   865→  return (
+   866→    <div dir="rtl">
+   867→      <AnimatePresence mode="wait">
+   868→        {step === 'input' && (
+   869→          <motion.div key="input" variants={scaleIn} initial="hidden" animate="visible" exit="exit">
+   870→            <StepInput />
+   871→          </motion.div>
+   872→        )}
+   873→        {step === 'preview' && (
+   874→          <motion.div key="preview" variants={scaleIn} initial="hidden" animate="visible" exit="exit">
+   875→            <StepPreview />
+   876→          </motion.div>
+   877→        )}
+   878→        {step === 'success' && (
+   879→          <motion.div key="success" variants={scaleIn} initial="hidden" animate="visible" exit="exit">
+   880→            <StepSuccess />
+   881→          </motion.div>
+   882→        )}
+   883→      </AnimatePresence>
+   884→    </div>
+   885→  );
+   886→}

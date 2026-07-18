@@ -16,6 +16,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { trackDishClick, trackAddToCart } from '@/lib/heatmap-tracker';
 
 /* ───────── helpers ───────── */
 
@@ -130,10 +131,12 @@ export default function SmartMenu({ onCartOpen }: SmartMenuProps) {
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   /* handlers */
-  const handleAddToCart = (dish: Dish) => {
+  const handleAddToCart = (dish: Dish, categoryId?: string, categoryName?: string) => {
     addToCart(dish);
     setAddedDishId(dish.id);
     setTimeout(() => setAddedDishId(null), 1500);
+    // Track heatmap event
+    trackAddToCart(dish.id, dish.name);
   };
 
   const handleOpenChat = (dish: Dish) => {
@@ -144,7 +147,7 @@ export default function SmartMenu({ onCartOpen }: SmartMenuProps) {
   /* ── sub-components ── */
 
   /* ---------- Dish Grid Card ---------- */
-  const DishCard = ({ dish, index }: { dish: Dish; index: number }) => {
+  const DishCard = ({ dish, index, categoryId, categoryName }: { dish: Dish; index: number; categoryId?: string; categoryName?: string }) => {
     const isAdded = addedDishId === dish.id;
     const emoji = getDishEmoji(dish, categories);
     const gradient = gradients[index % gradients.length];
@@ -155,9 +158,17 @@ export default function SmartMenu({ onCartOpen }: SmartMenuProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, delay: index * 0.04 }}
         className="glass-card group flex flex-col overflow-hidden transition-all duration-300 hover:border-primary/40"
-        onClick={() => setSelectedDish(dish)}
+        onClick={() => {
+          setSelectedDish(dish);
+          trackDishClick(dish.id, dish.name, categoryId, categoryName);
+        }}
         role="button"
         tabIndex={0}
+        data-dish-id={dish.id}
+        data-dish-name={dish.name}
+        data-category-id={categoryId}
+        data-category-name={categoryName}
+        data-heatmap-label={dish.name}
       >
         {/* emoji placeholder */}
         <div
@@ -414,7 +425,7 @@ export default function SmartMenu({ onCartOpen }: SmartMenuProps) {
               </h2>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {cat.dishes.map((dish, i) => (
-                  <DishCard key={dish.id} dish={dish} index={i} />
+                  <DishCard key={dish.id} dish={dish} index={i} categoryId={cat.id} categoryName={cat.name} />
                 ))}
               </div>
             </motion.section>
