@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import {
   Check,
   X,
@@ -34,6 +35,7 @@ import {
    SECTION 6: Pricing
    ============================================================ */
 export function Pricing() {
+  const router = useRouter();
   const plans = [
     {
       name: 'مجاني',
@@ -188,10 +190,11 @@ export function Pricing() {
             {/* CTA */}
             <div className="mt-8">
               <button
+                onClick={() => router.push('/login')}
                 className={
                   plan.ctaStyle === 'gold'
-                    ? 'w-full bg-[#C9A46C] text-[#0F0F0F] font-bold rounded-full py-3 px-6 cta-pulse text-center'
-                    : 'w-full glass rounded-full py-3 px-6 text-center text-[#F5F0E8]/70 hover:text-[#C9A46C] transition-colors'
+                    ? 'w-full bg-[#C9A46C] text-[#0F0F0F] font-bold rounded-full py-3 px-6 cta-pulse text-center cursor-pointer'
+                    : 'w-full glass rounded-full py-3 px-6 text-center text-[#F5F0E8]/70 hover:text-[#C9A46C] transition-colors cursor-pointer'
                 }
               >
                 {plan.cta}
@@ -474,6 +477,7 @@ export function Integration() {
    SECTION 9: Final CTA
    ============================================================ */
 export function FinalCTA() {
+  const router = useRouter();
   return (
     <section className="py-28 relative z-10 overflow-hidden">
       {/* Ambient warm glow spots */}
@@ -529,11 +533,11 @@ export function FinalCTA() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="mt-10 flex flex-col sm:flex-row gap-4 justify-center"
         >
-          <button className="bg-[#C9A46C] text-[#0F0F0F] font-bold px-10 py-4 rounded-full cta-pulse inline-flex items-center justify-center gap-2">
+          <button onClick={() => router.push('/login')} className="bg-[#C9A46C] text-[#0F0F0F] font-bold px-10 py-4 rounded-full cta-pulse inline-flex items-center justify-center gap-2 cursor-pointer">
             <ArrowLeft className="w-5 h-5" />
             ابدأ مجاناً
           </button>
-          <button className="glass rounded-full px-10 py-4 inline-flex items-center justify-center gap-2 text-[#F5F0E8]/70 hover:text-[#C9A46C] transition-colors">
+          <button onClick={() => router.push('/login')} className="glass rounded-full px-10 py-4 inline-flex items-center justify-center gap-2 text-[#F5F0E8]/70 hover:text-[#C9A46C] transition-colors cursor-pointer">
             <Play className="w-5 h-5" />
             احجز عرض توضيحي
           </button>

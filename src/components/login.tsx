@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   MessageCircle,
   Mail,
@@ -148,7 +149,8 @@ function OtpBox({
 /* ------------------------------------------------------------------ */
 
 export default function Login() {
-  const { setUser, setView } = useStore();
+  const { setUser } = useStore();
+  const router = useRouter();
 
   const [step, setStep] = useState<LoginStep>('method');
   const [phone, setPhone] = useState('');
@@ -171,7 +173,7 @@ export default function Login() {
         email: '',
         role: 'owner',
       });
-      setView('onboarding');
+      router.push('/onboarding');
     }, 1500);
   };
 
@@ -244,7 +246,7 @@ export default function Login() {
       email: 'demo@menuai.sa',
       role: 'owner',
     });
-    setView('onboarding');
+    router.push('/onboarding');
   };
 
   const handleResend = () => {

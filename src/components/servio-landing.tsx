@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Menu,
@@ -161,6 +162,7 @@ function BackgroundLayer() {
 
 function Navigation() {
   const { mobileMenuOpen, setMobileMenuOpen } = useServioStore();
+  const router = useRouter();
 
   const navLinks = [
     { label: 'القائمة', href: '#القائمة' },
@@ -200,9 +202,10 @@ function Navigation() {
               ))}
             </div>
             <motion.button
-              className="bg-[#C9A46C] text-[#0F0F0F] font-semibold px-5 py-2 rounded-full hover:bg-[#d4b07a] transition-colors duration-300"
+              className="bg-[#C9A46C] text-[#0F0F0F] font-semibold px-5 py-2 rounded-full hover:bg-[#d4b07a] transition-colors duration-300 cursor-pointer"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.97 }}
+              onClick={() => router.push('/login')}
             >
               ابدأ مجاناً
             </motion.button>

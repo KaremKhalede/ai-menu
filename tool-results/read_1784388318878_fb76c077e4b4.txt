@@ -1,0 +1,982 @@
+     1→'use client';
+     2→
+     3→import { useState, useMemo } from 'react';
+     4→import { motion, AnimatePresence } from 'framer-motion';
+     5→import {
+     6→  Users,
+     7→  Send,
+     8→  BarChart3,
+     9→  Search,
+    10→  ChevronDown,
+    11→  ChevronUp,
+    12→  Plus,
+    13→  Phone,
+    14→  Mail,
+    15→  Clock,
+    16→  Star,
+    17→  AlertTriangle,
+    18→  TrendingUp,
+    19→  Eye,
+    20→  MousePointerClick,
+    21→  ShoppingCart,
+    22→  MessageCircle,
+    23→  Calendar,
+    24→  Gift,
+    25→  RotateCcw,
+    26→  Award,
+    27→  Sparkles,
+    28→  UserCheck,
+    29→} from 'lucide-react';
+    30→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+    31→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+    32→import { Badge } from '@/components/ui/badge';
+    33→import { Button } from '@/components/ui/button';
+    34→import { Input } from '@/components/ui/input';
+    35→import { Textarea } from '@/components/ui/textarea';
+    36→import { Label } from '@/components/ui/label';
+    37→import { Progress } from '@/components/ui/progress';
+    38→import {
+    39→  Table,
+    40→  TableBody,
+    41→  TableCell,
+    42→  TableHead,
+    43→  TableHeader,
+    44→  TableRow,
+    45→} from '@/components/ui/table';
+    46→import {
+    47→  Select,
+    48→  SelectContent,
+    49→  SelectItem,
+    50→  SelectTrigger,
+    51→  SelectValue,
+    52→} from '@/components/ui/select';
+    53→import {
+    54→  Dialog,
+    55→  DialogContent,
+    56→  DialogDescription,
+    57→  DialogFooter,
+    58→  DialogHeader,
+    59→  DialogTitle,
+    60→  DialogTrigger,
+    61→} from '@/components/ui/dialog';
+    62→import {
+    63→  ChartContainer,
+    64→  ChartTooltip,
+    65→  ChartTooltipContent,
+    66→  ChartLegend,
+    67→  ChartLegendContent,
+    68→  type ChartConfig,
+    69→} from '@/components/ui/chart';
+    70→import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis } from 'recharts';
+    71→import {
+    72→  demoCustomers,
+    73→  demoCampaigns,
+    74→  campaignTemplates,
+    75→  segmentCustomers,
+    76→  generateCampaignMessage,
+    77→  getCRMAnalytics,
+    78→  getCustomerInsights,
+    79→  getChurnRiskCustomers,
+    80→  segmentLabels,
+    81→  type Customer,
+    82→  type Campaign,
+    83→  type TargetSegment,
+    84→  type CampaignTemplateKey,
+    85→  type CampaignOffer,
+    86→} from '@/lib/crm-engine';
+    87→
+    88→// ========== Helpers ==========
+    89→
+    90→const fadeUp = {
+    91→  hidden: { opacity: 0, y: 16 },
+    92→  visible: (i: number) => ({
+    93→    opacity: 1,
+    94→    y: 0,
+    95→    transition: { delay: i * 0.05, duration: 0.35 },
+    96→  }),
+    97→};
+    98→
+    99→const segmentColors: Record<string, string> = {
+   100→  new: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+   101→  repeat: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+   102→  inactive: 'bg-red-500/20 text-red-400 border-red-500/30',
+   103→  high_value: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+   104→  low_value: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+   105→};
+   106→
+   107→const segmentDotColors: Record<string, string> = {
+   108→  new: 'bg-blue-500',
+   109→  repeat: 'bg-emerald-500',
+   110→  inactive: 'bg-red-500',
+   111→  high_value: 'bg-yellow-500',
+   112→  low_value: 'bg-gray-500',
+   113→};
+   114→
+   115→const statusBadge: Record<string, { label: string; cls: string }> = {
+   116→  draft: { label: 'مسودة', cls: 'bg-gray-500/20 text-gray-400 border-gray-500/30' },
+   117→  scheduled: { label: 'مجدوّلة', cls: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+   118→  sent: { label: 'مرسلة', cls: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+   119→  completed: { label: 'مكتملة', cls: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
+   120→};
+   121→
+   122→function formatDate(d: Date) {
+   123→  return new Date(d).toLocaleDateString('ar-SA', {
+   124→    year: 'numeric',
+   125→    month: 'short',
+   126→    day: 'numeric',
+   127→  });
+   128→}
+   129→
+   130→function getCustomerSegmentBadge(c: Customer): { label: string; cls: string } {
+   131→  if (c.tags.includes('high_value')) return { label: 'قيمة عالية', cls: segmentColors.high_value };
+   132→  if (c.tags.includes('inactive')) return { label: 'غير نشط', cls: segmentColors.inactive };
+   133→  if (c.tags.includes('new')) return { label: 'جديد', cls: segmentColors.new };
+   134→  if (c.tags.includes('repeat')) return { label: 'متكرر', cls: segmentColors.repeat };
+   135→  return { label: 'قيمة منخفضة', cls: segmentColors.low_value };
+   136→}
+   137→
+   138→// ========== WhatsApp Preview ==========
+   139→
+   140→function WhatsAppPreview({ message }: { message: string }) {
+   141→  return (
+   142→    <div className="rounded-2xl overflow-hidden bg-[#0b141a] shadow-xl max-w-sm mx-auto">
+   143→      {/* Header */}
+   144→      <div className="bg-[#1f2c34] px-4 py-3 flex items-center gap-3">
+   145→        <div className="w-9 h-9 rounded-full bg-[#d4a853]/20 flex items-center justify-center">
+   146→          <MessageCircle className="w-4 h-4 text-[#d4a853]" />
+   147→        </div>
+   148→        <div>
+   149→          <p className="text-white text-sm font-medium">مطعم الذهبي</p>
+   150→          <p className="text-gray-400 text-xs">متصل الآن</p>
+   151→        </div>
+   152→      </div>
+   153→      {/* Chat area */}
+   154→      <div className="px-3 py-4 space-y-2 min-h-[120px] flex items-end justify-start">
+   155→        <div className="bg-[#005c4b] rounded-lg rounded-tr-none px-3 py-2 max-w-[85%] shadow">
+   156→          <p className="text-white text-sm whitespace-pre-wrap leading-relaxed">
+   157→            {message || 'اكتب رسالتك هنا...'}
+   158→          </p>
+   159→          <p className="text-[#8696a0] text-[10px] text-left mt-1">11:30 ص</p>
+   160→        </div>
+   161→      </div>
+   162→      {/* Input bar */}
+   163→      <div className="bg-[#1f2c34] px-3 py-2 flex items-center gap-2">
+   164→        <div className="flex-1 bg-[#2a3942] rounded-full px-4 py-2 text-[#8696a0] text-xs">
+   165→          اكتب رسالة
+   166→        </div>
+   167→        <div className="w-8 h-8 rounded-full bg-[#d4a853] flex items-center justify-center">
+   168→          <Send className="w-3.5 h-3.5 text-[#0a0a0f]" />
+   169→        </div>
+   170→      </div>
+   171→    </div>
+   172→  );
+   173→}
+   174→
+   175→// ========== KPI Card ==========
+   176→
+   177→function KPICard({
+   178→  icon: Icon,
+   179→  label,
+   180→  value,
+   181→  sub,
+   182→  delay,
+   183→}: {
+   184→  icon: React.ElementType;
+   185→  label: string;
+   186→  value: string | number;
+   187→  sub?: string;
+   188→  delay: number;
+   189→}) {
+   190→  return (
+   191→    <motion.div
+   192→      variants={fadeUp}
+   193→      initial="hidden"
+   194→      animate="visible"
+   195→      custom={delay}
+   196→      className="glass-card p-4"
+   197→    >
+   198→      <div className="flex items-center gap-3 mb-2">
+   199→        <div className="w-9 h-9 rounded-lg bg-[#d4a853]/10 flex items-center justify-center">
+   200→          <Icon className="w-4.5 h-4.5 text-[#d4a853]" />
+   201→        </div>
+   202→        <span className="text-gray-400 text-xs">{label}</span>
+   203→      </div>
+   204→      <p className="text-2xl font-bold text-white">{value}</p>
+   205→      {sub && <p className="text-gray-500 text-xs mt-1">{sub}</p>}
+   206→    </motion.div>
+   207→  );
+   208→}
+   209→
+   210→// ========== TAB 1 – Customers ==========
+   211→
+   212→function CustomersTab() {
+   213→  const [search, setSearch] = useState('');
+   214→  const [segmentFilter, setSegmentFilter] = useState<string>('all');
+   215→  const [expandedId, setExpandedId] = useState<string | null>(null);
+   216→
+   217→  const filtered = useMemo(() => {
+   218→    let list = segmentCustomers(demoCustomers, segmentFilter as TargetSegment);
+   219→    if (search.trim()) {
+   220→      const q = search.trim().toLowerCase();
+   221→      list = list.filter(
+   222→        (c) =>
+   223→          c.name.includes(q) ||
+   224→          c.phone.includes(q) ||
+   225→          c.favoriteDishes.some((d) => d.includes(q))
+   226→      );
+   227→    }
+   228→    return list;
+   229→  }, [search, segmentFilter]);
+   230→
+   231→  return (
+   232→    <div className="space-y-4">
+   233→      {/* Filters */}
+   234→      <div className="flex flex-col sm:flex-row gap-3">
+   235→        <div className="relative flex-1">
+   236→          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+   237→          <Input
+   238→            placeholder="ابحث بالاسم أو الجوال..."
+   239→            value={search}
+   240→            onChange={(e) => setSearch(e.target.value)}
+   241→            className="pr-10 glass-card border-white/5 bg-transparent text-white placeholder:text-gray-500"
+   242→          />
+   243→        </div>
+   244→        <Select
+   245→          value={segmentFilter}
+   246→          onValueChange={setSegmentFilter}
+   247→        >
+   248→          <SelectTrigger className="w-full sm:w-[200px] glass-card border-white/5 bg-transparent text-white">
+   249→            <SelectValue />
+   250→          </SelectTrigger>
+   251→          <SelectContent className="bg-[#12121a] border-white/10">
+   252→            {Object.entries(segmentLabels).map(([key, label]) => (
+   253→              <SelectItem key={key} value={key} className="text-white">
+   254→                {label}
+   255→              </SelectItem>
+   256→            ))}
+   257→          </SelectContent>
+   258→        </Select>
+   259→      </div>
+   260→
+   261→      {/* Customer count */}
+   262→      <p className="text-gray-500 text-sm">
+   263→        عرض <span className="text-[#d4a853] font-medium">{filtered.length}</span> عميل
+   264→      </p>
+   265→
+   266→      {/* Table */}
+   267→      <div className="glass-card overflow-hidden">
+   268→        <Table>
+   269→          <TableHeader>
+   270→            <TableRow className="border-white/5 hover:bg-transparent">
+   271→              <TableHead className="text-gray-400 text-right">العميل</TableHead>
+   272→              <TableHead className="text-gray-400 text-right">الجوال</TableHead>
+   273→              <TableHead className="text-gray-400 text-right">الطلبات</TableHead>
+   274→              <TableHead className="text-gray-400 text-right">المصروف</TableHead>
+   275→              <TableHead className="text-gray-400 text-right">آخر طلب</TableHead>
+   276→              <TableHead className="text-gray-400 text-right">الشريحة</TableHead>
+   277→              <TableHead className="w-8" />
+   278→            </TableRow>
+   279→          </TableHeader>
+   280→          <TableBody>
+   281→            {filtered.map((c, i) => {
+   282→              const seg = getCustomerSegmentBadge(c);
+   283→              const isExpanded = expandedId === c.id;
+   284→              return (
+   285→                <motion.tr
+   286→                  key={c.id}
+   287→                  initial={{ opacity: 0, y: 8 }}
+   288→                  animate={{ opacity: 1, y: 0 }}
+   289→                  transition={{ delay: i * 0.04 }}
+   290→                  className="border-white/5 hover:bg-white/[0.02] cursor-pointer transition-colors"
+   291→                  onClick={() => setExpandedId(isExpanded ? null : c.id)}
+   292→                >
+   293→                  <TableCell className="text-white font-medium text-right">
+   294→                    <div className="flex items-center gap-2">
+   295→                      <div className="w-7 h-7 rounded-full bg-[#d4a853]/15 flex items-center justify-center text-[#d4a853] text-xs font-bold">
+   296→                        {c.name.charAt(0)}
+   297→                      </div>
+   298→                      {c.name}
+   299→                    </div>
+   300→                  </TableCell>
+   301→                  <TableCell className="text-gray-300 text-right font-mono text-sm">{c.phone}</TableCell>
+   302→                  <TableCell className="text-white text-right">{c.totalOrders}</TableCell>
+   303→                  <TableCell className="text-white text-right">{c.totalSpent.toLocaleString('ar-SA')} ر.س</TableCell>
+   304→                  <TableCell className="text-gray-400 text-right text-sm">{formatDate(c.lastOrderDate)}</TableCell>
+   305→                  <TableCell className="text-right">
+   306→                    <Badge variant="outline" className={seg.cls}>{seg.label}</Badge>
+   307→                  </TableCell>
+   308→                  <TableCell>
+   309→                    {isExpanded ? (
+   310→                      <ChevronUp className="w-4 h-4 text-gray-500" />
+   311→                    ) : (
+   312→                      <ChevronDown className="w-4 h-4 text-gray-500" />
+   313→                    )}
+   314→                  </TableCell>
+   315→                </motion.tr>
+   316→              );
+   317→            })}
+   318→          </TableBody>
+   319→        </Table>
+   320→
+   321→        {/* Expanded detail */}
+   322→        <AnimatePresence>
+   323→          {expandedId && (
+   324→            <motion.div
+   325→              initial={{ height: 0, opacity: 0 }}
+   326→              animate={{ height: 'auto', opacity: 1 }}
+   327→              exit={{ height: 0, opacity: 0 }}
+   328→              transition={{ duration: 0.25 }}
+   329→              className="overflow-hidden"
+   330→            >
+   331→              <CustomerDetail customerId={expandedId} />
+   332→            </motion.div>
+   333→          )}
+   334→        </AnimatePresence>
+   335→      </div>
+   336→    </div>
+   337→  );
+   338→}
+   339→
+   340→function CustomerDetail({ customerId }: { customerId: string }) {
+   341→  const insight = getCustomerInsights(customerId);
+   342→  if (!insight) return null;
+   343→  const { customer } = insight;
+   344→
+   345→  return (
+   346→    <div className="border-t border-white/5 p-4 bg-white/[0.01] space-y-4">
+   347→      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+   348→        <div className="space-y-1">
+   349→          <p className="text-gray-500 text-xs">متوسط قيمة الطلب</p>
+   350→          <p className="text-white font-bold">{insight.avgOrderValue} ر.س</p>
+   351→        </div>
+   352→        <div className="space-y-1">
+   353→          <p className="text-gray-500 text-xs">أيام منذ آخر طلب</p>
+   354→          <p className={`font-bold ${insight.daysSinceLastOrder > 30 ? 'text-red-400' : 'text-white'}`}>
+   355→            {insight.daysSinceLastOrder} يوم
+   356→          </p>
+   357→        </div>
+   358→        <div className="space-y-1">
+   359→          <p className="text-gray-500 text-xs">مستوى خطر الفقدان</p>
+   360→          <Badge
+   361→            variant="outline"
+   362→            className={
+   363→              insight.churnRiskLevel === 'مرتفع'
+   364→                ? 'bg-red-500/20 text-red-400 border-red-500/30'
+   365→                : insight.churnRiskLevel === 'متوسط'
+   366→                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+   367→                  : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+   368→            }
+   369→          >
+   370→            {insight.churnRiskLevel}
+   371→          </Badge>
+   372→        </div>
+   373→      </div>
+   374→
+   375→      <div>
+   376→        <p className="text-gray-500 text-xs mb-2">الأطباق المفضّلة</p>
+   377→        <div className="flex flex-wrap gap-2">
+   378→          {customer.favoriteDishes.map((dish) => (
+   379→            <Badge key={dish} variant="outline" className="bg-[#d4a853]/10 text-[#d4a853] border-[#d4a853]/20">
+   380→              {dish}
+   381→            </Badge>
+   382→          ))}
+   383→        </div>
+   384→      </div>
+   385→
+   386→      <div className="flex items-start gap-2 p-3 rounded-lg bg-[#d4a853]/5 border border-[#d4a853]/10">
+   387→        <Sparkles className="w-4 h-4 text-[#d4a853] mt-0.5 shrink-0" />
+   388→        <p className="text-gray-300 text-sm">{insight.suggestedAction}</p>
+   389→      </div>
+   390→    </div>
+   391→  );
+   392→}
+   393→
+   394→// ========== TAB 2 – Campaigns ==========
+   395→
+   396→function CampaignsTab() {
+   397→  const [dialogOpen, setDialogOpen] = useState(false);
+   398→
+   399→  // Campaign form state
+   400→  const [campName, setCampName] = useState('');
+   401→  const [campType, setCampType] = useState<'whatsapp' | 'push' | 'email'>('whatsapp');
+   402→  const [campSegment, setCampSegment] = useState<TargetSegment>('all');
+   403→  const [campTemplate, setCampTemplate] = useState<CampaignTemplateKey>('weekly_specials');
+   404→  const [campMessage, setCampMessage] = useState('');
+   405→  const [offerType, setOfferType] = useState<CampaignOffer['type']>('percentage');
+   406→  const [offerValue, setOfferValue] = useState('');
+   407→  const [offerMinOrder, setOfferMinOrder] = useState('');
+   408→
+   409→  const previewMessage = useMemo(() => {
+   410→    if (!campMessage.trim()) return '';
+   411→    return campMessage;
+   412→  }, [campMessage]);
+   413→
+   414→  function handleTemplateSelect(key: CampaignTemplateKey) {
+   415→    setCampTemplate(key);
+   416→    const tpl = campaignTemplates[key];
+   417→    const seg = tpl.defaultSegment;
+   418→    setCampSegment(seg);
+   419→    setCampMessage(tpl.defaultMessage);
+   420→  }
+   421→
+   422→  function handleCreate() {
+   423→    setDialogOpen(false);
+   424→    // Reset
+   425→    setCampName('');
+   426→    setCampMessage('');
+   427→    setOfferValue('');
+   428→    setOfferMinOrder('');
+   429→  }
+   430→
+   431→  return (
+   432→    <div className="space-y-4">
+   433→      {/* Header */}
+   434→      <div className="flex items-center justify-between">
+   435→        <p className="text-gray-500 text-sm">
+   436→          <span className="text-[#d4a853] font-medium">{demoCampaigns.length}</span> حملة
+   437→        </p>
+   438→        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+   439→          <DialogTrigger asChild>
+   440→            <Button className="gold-gradient gap-2 text-[#0a0a0f] font-bold rounded-lg">
+   441→              <Plus className="w-4 h-4" />
+   442→              إنشاء حملة جديدة
+   443→            </Button>
+   444→          </DialogTrigger>
+   445→          <DialogContent className="bg-[#0e0e16] border-white/10 max-w-2xl max-h-[90vh] overflow-y-auto">
+   446→            <DialogHeader>
+   447→              <DialogTitle className="text-white text-right">إنشاء حملة جديدة</DialogTitle>
+   448→              <DialogDescription className="text-gray-400 text-right">
+   449→                صمّم حملتك التسويقية واختر الجمهور المستهدف
+   450→              </DialogDescription>
+   451→            </DialogHeader>
+   452→
+   453→            <div className="space-y-4 py-2">
+   454→              {/* Name */}
+   455→              <div className="space-y-2">
+   456→                <Label className="text-gray-300 text-right">اسم الحملة</Label>
+   457→                <Input
+   458→                  value={campName}
+   459→                  onChange={(e) => setCampName(e.target.value)}
+   460→                  placeholder="مثال: عروض نهاية الأسبوع"
+   461→                  className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+   462→                />
+   463→              </div>
+   464→
+   465→              {/* Type + Segment row */}
+   466→              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   467→                <div className="space-y-2">
+   468→                  <Label className="text-gray-300 text-right">نوع الحملة</Label>
+   469→                  <Select value={campType} onValueChange={(v) => setCampType(v as typeof campType)}>
+   470→                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
+   471→                      <SelectValue />
+   472→                    </SelectTrigger>
+   473→                    <SelectContent className="bg-[#12121a] border-white/10">
+   474→                      <SelectItem value="whatsapp" className="text-white">واتساب</SelectItem>
+   475→                      <SelectItem value="push" className="text-white">إشعارات</SelectItem>
+   476→                      <SelectItem value="email" className="text-white">بريد إلكتروني</SelectItem>
+   477→                    </SelectContent>
+   478→                  </Select>
+   479→                </div>
+   480→                <div className="space-y-2">
+   481→                  <Label className="text-gray-300 text-right">الجمهور المستهدف</Label>
+   482→                  <Select value={campSegment} onValueChange={(v) => setCampSegment(v as TargetSegment)}>
+   483→                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
+   484→                      <SelectValue />
+   485→                    </SelectTrigger>
+   486→                    <SelectContent className="bg-[#12121a] border-white/10">
+   487→                      {Object.entries(segmentLabels).map(([key, label]) => (
+   488→                        <SelectItem key={key} value={key} className="text-white">{label}</SelectItem>
+   489→                      ))}
+   490→                    </SelectContent>
+   491→                  </Select>
+   492→                </div>
+   493→              </div>
+   494→
+   495→              {/* Template */}
+   496→              <div className="space-y-2">
+   497→                <Label className="text-gray-300 text-right">قالب الرسالة</Label>
+   498→                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+   499→                  {Object.values(campaignTemplates).map((tpl) => (
+   500→                    <button
+   501→                      key={tpl.key}
+   502→                      type="button"
+   503→                      onClick={() => handleTemplateSelect(tpl.key)}
+   504→                      className={`p-3 rounded-lg border text-right transition-all ${
+   505→                        campTemplate === tpl.key
+   506→                          ? 'border-[#d4a853] bg-[#d4a853]/10'
+   507→                          : 'border-white/10 bg-white/[0.02] hover:bg-white/5'
+   508→                      }`}
+   509→                    >
+   510→                      <p className="text-white text-xs font-medium mb-0.5">{tpl.name}</p>
+   511→                      <p className="text-gray-500 text-[10px]">{tpl.description}</p>
+   512→                    </button>
+   513→                  ))}
+   514→                </div>
+   515→              </div>
+   516→
+   517→              {/* Message */}
+   518→              <div className="space-y-2">
+   519→                <Label className="text-gray-300 text-right">نص الرسالة</Label>
+   520→                <Textarea
+   521→                  value={campMessage}
+   522→                  onChange={(e) => setCampMessage(e.target.value)}
+   523→                  rows={5}
+   524→                  className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 resize-none"
+   525→                  dir="rtl"
+   526→                />
+   527→              </div>
+   528→
+   529→              {/* Offer */}
+   530→              <div className="space-y-2">
+   531→                <Label className="text-gray-300 text-right">العرض (اختياري)</Label>
+   532→                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+   533→                  <Select value={offerType} onValueChange={(v) => setOfferType(v as CampaignOffer['type'])}>
+   534→                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
+   535→                      <SelectValue />
+   536→                    </SelectTrigger>
+   537→                    <SelectContent className="bg-[#12121a] border-white/10">
+   538→                      <SelectItem value="percentage" className="text-white">خصم نسبة %</SelectItem>
+   539→                      <SelectItem value="fixed" className="text-white">خصم مبلغ ثابت</SelectItem>
+   540→                      <SelectItem value="bogo" className="text-white">اشترِ واحصل على واحد مجاناً</SelectItem>
+   541→                      <SelectItem value="free_delivery" className="text-white">توصيل مجاني</SelectItem>
+   542→                    </SelectContent>
+   543→                  </Select>
+   544→                  {offerType !== 'bogo' && offerType !== 'free_delivery' && (
+   545→                    <Input
+   546→                      value={offerValue}
+   547→                      onChange={(e) => setOfferValue(e.target.value)}
+   548→                      placeholder={offerType === 'percentage' ? 'النسبة (مثلاً 20)' : 'المبلغ (مثلاً 15)'}
+   549→                      type="number"
+   550→                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+   551→                    />
+   552→                  )}
+   553→                  <Input
+   554→                    value={offerMinOrder}
+   555→                    onChange={(e) => setOfferMinOrder(e.target.value)}
+   556→                    placeholder="الحد الأدنى للطلب (اختياري)"
+   557→                    type="number"
+   558→                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+   559→                  />
+   560→                </div>
+   561→              </div>
+   562→
+   563→              {/* Preview */}
+   564→              <div className="space-y-2">
+   565→                <Label className="text-gray-300 text-right">معاينة الرسالة</Label>
+   566→                <WhatsAppPreview message={previewMessage} />
+   567→              </div>
+   568→            </div>
+   569→
+   570→            <DialogFooter className="flex gap-2 sm:gap-0">
+   571→              <Button
+   572→                variant="ghost"
+   573→                onClick={() => setDialogOpen(false)}
+   574→                className="text-gray-400 hover:text-white"
+   575→              >
+   576→                إلغاء
+   577→              </Button>
+   578→              <Button
+   579→                onClick={handleCreate}
+   580→                className="bg-[#d4a853] text-[#0a0a0f] font-bold hover:bg-[#e8c47c] rounded-lg"
+   581→              >
+   582→                <Send className="w-4 h-4 ml-1" />
+   583→                إرسال الحملة
+   584→              </Button>
+   585→            </DialogFooter>
+   586→          </DialogContent>
+   587→        </Dialog>
+   588→      </div>
+   589→
+   590→      {/* Campaign Cards */}
+   591→      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+   592→        {demoCampaigns.map((camp, i) => {
+   593→          const st = statusBadge[camp.status];
+   594→          const convRate = camp.stats.sent > 0
+   595→            ? Math.round((camp.stats.converted / camp.stats.sent) * 100)
+   596→            : 0;
+   597→          const readRate = camp.stats.sent > 0
+   598→            ? Math.round((camp.stats.read / camp.stats.sent) * 100)
+   599→            : 0;
+   600→
+   601→          return (
+   602→            <motion.div
+   603→              key={camp.id}
+   604→              variants={fadeUp}
+   605→              initial="hidden"
+   606→              animate="visible"
+   607→              custom={i}
+   608→              className="glass-card p-4 space-y-3"
+   609→            >
+   610→              <div className="flex items-start justify-between">
+   611→                <div>
+   612→                  <h3 className="text-white font-semibold text-sm">{camp.name}</h3>
+   613→                  <div className="flex items-center gap-2 mt-1">
+   614→                    <Badge
+   615→                      variant="outline"
+   616→                      className={
+   617→                        camp.type === 'whatsapp'
+   618→                          ? 'bg-green-500/20 text-green-400 border-green-500/30'
+   619→                          : camp.type === 'push'
+   620→                            ? 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+   621→                            : 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+   622→                      }
+   623→                    >
+   624→                      {camp.type === 'whatsapp' ? 'واتساب' : camp.type === 'push' ? 'إشعارات' : 'بريد'}
+   625→                    </Badge>
+   626→                    <Badge variant="outline" className={st.cls}>{st.label}</Badge>
+   627→                  </div>
+   628→                </div>
+   629→                <div className="text-left">
+   630→                  <p className="text-[#d4a853] font-bold text-lg">{convRate}%</p>
+   631→                  <p className="text-gray-500 text-[10px]">معدل التحويل</p>
+   632→                </div>
+   633→              </div>
+   634→
+   635→              {/* Offer pill */}
+   636→              {camp.offer && (
+   637→                <div className="flex items-center gap-1.5 text-xs text-gray-400">
+   638→                  <Gift className="w-3 h-3 text-[#d4a853]" />
+   639→                  {camp.offer.type === 'percentage' && `خصم ${camp.offer.value}%`}
+   640→                  {camp.offer.type === 'fixed' && `خصم ${camp.offer.value} ر.س`}
+   641→                  {camp.offer.type === 'bogo' && 'اشترِ واحد واحصل على واحد مجاناً'}
+   642→                  {camp.offer.type === 'free_delivery' && 'توصيل مجاني'}
+   643→                  {camp.offer.minOrder && ` (الحد الأدنى ${camp.offer.minOrder} ر.س)`}
+   644→                </div>
+   645→              )}
+   646→
+   647→              {/* Stats row */}
+   648→              {camp.stats.sent > 0 && (
+   649→                <div className="space-y-2">
+   650→                  <div className="grid grid-cols-4 gap-2 text-center">
+   651→                    <div>
+   652→                      <p className="text-white text-sm font-bold">{camp.stats.sent}</p>
+   653→                      <p className="text-gray-500 text-[10px]">مُرسل</p>
+   654→                    </div>
+   655→                    <div>
+   656→                      <p className="text-white text-sm font-bold">{readRate}%</p>
+   657→                      <p className="text-gray-500 text-[10px]">مقروء</p>
+   658→                    </div>
+   659→                    <div>
+   660→                      <p className="text-white text-sm font-bold">{camp.stats.clicked}</p>
+   661→                      <p className="text-gray-500 text-[10px]">نقر</p>
+   662→                    </div>
+   663→                    <div>
+   664→                      <p className="text-[#d4a853] text-sm font-bold">{camp.stats.converted}</p>
+   665→                      <p className="text-gray-500 text-[10px]">تحويل</p>
+   666→                    </div>
+   667→                  </div>
+   668→                  {/* Funnel bar */}
+   669→                  <div className="flex h-2 rounded-full overflow-hidden bg-white/5">
+   670→                    <div
+   671→                      className="bg-blue-500 transition-all"
+   672→                      style={{ width: `${(camp.stats.delivered / camp.stats.sent) * 100}%` }}
+   673→                    />
+   674→                    <div
+   675→                      className="bg-purple-500 transition-all"
+   676→                      style={{ width: `${(camp.stats.read / camp.stats.sent) * 100}%` }}
+   677→                    />
+   678→                    <div
+   679→                      className="bg-[#d4a853] transition-all"
+   680→                      style={{ width: `${(camp.stats.converted / camp.stats.sent) * 100}%` }}
+   681→                    />
+   682→                  </div>
+   683→                </div>
+   684→              )}
+   685→
+   686→              {camp.scheduledAt && (
+   687→                <div className="flex items-center gap-1.5 text-xs text-amber-400">
+   688→                  <Calendar className="w-3 h-3" />
+   689→                  مجدوّلة: {formatDate(camp.scheduledAt)}
+   690→                </div>
+   691→              )}
+   692→            </motion.div>
+   693→          );
+   694→        })}
+   695→      </div>
+   696→    </div>
+   697→  );
+   698→}
+   699→
+   700→// ========== TAB 3 – Analytics ==========
+   701→
+   702→const pieChartConfig: ChartConfig = {
+   703→  new: { label: 'جدد', color: '#3b82f6' },
+   704→  repeat: { label: 'متكررين', color: '#10b981' },
+   705→  inactive: { label: 'غير نشطين', color: '#ef4444' },
+   706→  high_value: { label: 'قيمة عالية', color: '#d4a853' },
+   707→};
+   708→
+   709→const barChartConfig: ChartConfig = {
+   710→  revenue: { label: 'الإيرادات (ر.س)', color: '#d4a853' },
+   711→};
+   712→
+   713→function AnalyticsTab() {
+   714→  const analytics = useMemo(() => getCRMAnalytics(), []);
+   715→
+   716→  // Pie data
+   717→  const pieData = [
+   718→    { name: 'new', value: demoCustomers.filter((c) => c.tags.includes('new')).length },
+   719→    { name: 'repeat', value: demoCustomers.filter((c) => c.tags.includes('repeat')).length },
+   720→    { name: 'inactive', value: demoCustomers.filter((c) => c.tags.includes('inactive')).length },
+   721→    { name: 'high_value', value: demoCustomers.filter((c) => c.tags.includes('high_value')).length },
+   722→  ];
+   723→
+   724→  // Bar data – revenue by segment
+   725→  const barData = [
+   726→    {
+   727→      segment: 'جدد',
+   728→      revenue: demoCustomers
+   729→        .filter((c) => c.tags.includes('new'))
+   730→        .reduce((s, c) => s + c.totalSpent, 0),
+   731→    },
+   732→    {
+   733→      segment: 'متكررين',
+   734→      revenue: demoCustomers
+   735→        .filter((c) => c.tags.includes('repeat') && !c.tags.includes('high_value'))
+   736→        .reduce((s, c) => s + c.totalSpent, 0),
+   737→    },
+   738→    {
+   739→      segment: 'غير نشطين',
+   740→      revenue: demoCustomers
+   741→        .filter((c) => c.tags.includes('inactive'))
+   742→        .reduce((s, c) => s + c.totalSpent, 0),
+   743→    },
+   744→    {
+   745→      segment: 'قيمة عالية',
+   746→      revenue: demoCustomers
+   747→        .filter((c) => c.tags.includes('high_value'))
+   748→        .reduce((s, c) => s + c.totalSpent, 0),
+   749→    },
+   750→  ];
+   751→
+   752→  return (
+   753→    <div className="space-y-6">
+   754→      {/* KPIs */}
+   755→      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+   756→        <KPICard
+   757→          icon={Users}
+   758→          label="إجمالي العملاء"
+   759→          value={analytics.totalCustomers}
+   760→          sub={`${analytics.newCustomersThisMonth} عميل جديد هذا الشهر`}
+   761→          delay={0}
+   762→        />
+   763→        <KPICard
+   764→          icon={UserCheck}
+   765→          label="معدل الاحتفاظ"
+   766→          value={`${analytics.retentionRate}%`}
+   767→          sub="خلال آخر 30 يوم"
+   768→          delay={1}
+   769→        />
+   770→        <KPICard
+   771→          icon={TrendingUp}
+   772→          label="متوسط قيمة العميل"
+   773→          value={`${analytics.customerLifetimeValue} ر.س`}
+   774→          sub="عمر العميل الافتراضي"
+   775→          delay={2}
+   776→        />
+   777→        <KPICard
+   778→          icon={ShoppingCart}
+   779→          label="متوسط الطلبات/عميل"
+   780→          value={analytics.avgOrdersPerCustomer}
+   781→          sub={`${analytics.churnRisk.length} عميل بخطر الفقدان`}
+   782→          delay={3}
+   783→        />
+   784→      </div>
+   785→
+   786→      {/* Charts */}
+   787→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   788→        {/* Pie – Customer Distribution */}
+   789→        <motion.div
+   790→          variants={fadeUp}
+   791→          initial="hidden"
+   792→          animate="visible"
+   793→          custom={4}
+   794→          className="glass-card p-4"
+   795→        >
+   796→          <h3 className="text-white font-semibold mb-4 text-sm">توزيع العملاء حسب الشريحة</h3>
+   797→          <ChartContainer config={pieChartConfig} className="mx-auto h-[250px] w-full">
+   798→            <PieChart>
+   799→              <ChartTooltip content={<ChartTooltipContent />} />
+   800→              <Pie
+   801→                data={pieData}
+   802→                cx="50%"
+   803→                cy="50%"
+   804→                innerRadius={60}
+   805→                outerRadius={90}
+   806→                paddingAngle={3}
+   807→                dataKey="value"
+   808→                nameKey="name"
+   809→              >
+   810→                {pieData.map((entry) => (
+   811→                  <Cell
+   812→                    key={entry.name}
+   813→                    fill={pieChartConfig[entry.name as keyof typeof pieChartConfig]?.color}
+   814→                    className="stroke-transparent"
+   815→                  />
+   816→                ))}
+   817→              </Pie>
+   818→              <ChartLegend content={<ChartLegendContent />} />
+   819→            </PieChart>
+   820→          </ChartContainer>
+   821→        </motion.div>
+   822→
+   823→        {/* Bar – Revenue by segment */}
+   824→        <motion.div
+   825→          variants={fadeUp}
+   826→          initial="hidden"
+   827→          animate="visible"
+   828→          custom={5}
+   829→          className="glass-card p-4"
+   830→        >
+   831→          <h3 className="text-white font-semibold mb-4 text-sm">الإيرادات حسب الشريحة</h3>
+   832→          <ChartContainer config={barChartConfig} className="h-[250px] w-full">
+   833→            <BarChart data={barData} layout="vertical" margin={{ left: 0, right: 20 }}>
+   834→              <ChartTooltip content={<ChartTooltipContent />} />
+   835→              <XAxis type="number" tick={{ fill: '#9ca3af', fontSize: 11 }} />
+   836→              <YAxis
+   837→                type="category"
+   838→                dataKey="segment"
+   839→                width={80}
+   840→                tick={{ fill: '#9ca3af', fontSize: 11 }}
+   841→              />
+   842→              <Bar dataKey="revenue" radius={[0, 6, 6, 0]} fill="#d4a853" />
+   843→            </BarChart>
+   844→          </ChartContainer>
+   845→        </motion.div>
+   846→      </div>
+   847→
+   848→      {/* Campaign Performance Table */}
+   849→      <motion.div
+   850→        variants={fadeUp}
+   851→        initial="hidden"
+   852→        animate="visible"
+   853→        custom={6}
+   854→        className="glass-card overflow-hidden"
+   855→      >
+   856→        <div className="p-4 border-b border-white/5">
+   857→          <h3 className="text-white font-semibold text-sm">أداء الحملات</h3>
+   858→        </div>
+   859→        <Table>
+   860→          <TableHeader>
+   861→            <TableRow className="border-white/5 hover:bg-transparent">
+   862→              <TableHead className="text-gray-400 text-right">الحملة</TableHead>
+   863→              <TableHead className="text-gray-400 text-right">مُرسل</TableHead>
+   864→              <TableHead className="text-gray-400 text-right">تم التوصيل</TableHead>
+   865→              <TableHead className="text-gray-400 text-right">مقروء</TableHead>
+   866→              <TableHead className="text-gray-400 text-right">نقر</TableHead>
+   867→              <TableHead className="text-gray-400 text-right">تحويل</TableHead>
+   868→              <TableHead className="text-gray-400 text-right">العائد</TableHead>
+   869→            </TableRow>
+   870→          </TableHeader>
+   871→          <TableBody>
+   872→            {analytics.campaignROI.map((row, i) => (
+   873→              <motion.tr
+   874→                key={row.campaignName}
+   875→                initial={{ opacity: 0 }}
+   876→                animate={{ opacity: 1 }}
+   877→                transition={{ delay: 0.1 + i * 0.06 }}
+   878→                className="border-white/5 hover:bg-white/[0.02] transition-colors"
+   879→              >
+   880→                <TableCell className="text-white text-right font-medium">{row.campaignName}</TableCell>
+   881→                <TableCell className="text-gray-300 text-right">{row.sent}</TableCell>
+   882→                <TableCell className="text-gray-300 text-right">
+   883→                  {Math.round(row.sent * 0.95)}
+   884→                </TableCell>
+   885→                <TableCell className="text-gray-300 text-right">
+   886→                  {Math.round(row.sent * 0.72)}
+   887→                </TableCell>
+   888→                <TableCell className="text-gray-300 text-right">
+   889→                  {Math.round(row.sent * 0.43)}
+   890→                </TableCell>
+   891→                <TableCell className="text-[#d4a853] text-right font-bold">{row.converted}</TableCell>
+   892→                <TableCell className="text-right">
+   893→                  <Badge
+   894→                    variant="outline"
+   895→                    className={
+   896→                      row.roi > 200
+   897→                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+   898→                        : row.roi > 100
+   899→                          ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+   900→                          : 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+   901→                    }
+   902→                  >
+   903→                    {row.roi}%
+   904→                  </Badge>
+   905→                </TableCell>
+   906→              </motion.tr>
+   907→            ))}
+   908→          </TableBody>
+   909→        </Table>
+   910→      </motion.div>
+   911→    </div>
+   912→  );
+   913→}
+   914→
+   915→// ========== Main Dashboard ==========
+   916→
+   917→export default function CRMDashboard() {
+   918→  return (
+   919→    <div className="min-h-screen bg-[#0a0a0f]" dir="rtl">
+   920→      <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+   921→        {/* Header */}
+   922→        <motion.div
+   923→          initial={{ opacity: 0, y: -12 }}
+   924→          animate={{ opacity: 1, y: 0 }}
+   925→          className="flex items-center gap-4"
+   926→        >
+   927→          <div className="w-10 h-10 rounded-xl bg-[#d4a853]/10 flex items-center justify-center">
+   928→            <BarChart3 className="w-5 h-5 text-[#d4a853]" />
+   929→          </div>
+   930→          <div>
+   931→            <h1 className="gold-gradient-text text-2xl font-bold">إدارة العملاء</h1>
+   932→            <p className="text-gray-500 text-sm">نظام CRM وإعادة الاستهداف عبر واتساب</p>
+   933→          </div>
+   934→        </motion.div>
+   935→
+   936→        {/* Quick Churn Alert */}
+   937→        <motion.div
+   938→          initial={{ opacity: 0 }}
+   939→          animate={{ opacity: 1 }}
+   940→          transition={{ delay: 0.2 }}
+   941→          className="glass-card p-4 flex items-start gap-3 border-amber-500/20"
+   942→        >
+   943→          <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
+   944→          <div>
+   945→            <p className="text-amber-400 font-semibold text-sm">تنبيه: عملاء بخطر الفقدان</p>
+   946→            <p className="text-gray-400 text-xs mt-0.5">
+   947→              {getChurnRiskCustomers().length} عملاء لم يطلبوا خلال آخر 30 يوم. ننصح بإرسال حملة إعادة تنشيط.
+   948→            </p>
+   949→          </div>
+   950→        </motion.div>
+   951→
+   952→        {/* Tabs */}
+   953→        <Tabs defaultValue="customers" className="w-full">
+   954→          <TabsList className="bg-white/5 border border-white/10 w-full sm:w-auto">
+   955→            <TabsTrigger value="customers" className="gap-2 data-[state=active]:bg-[#d4a853]/15 data-[state=active]:text-[#d4a853] text-gray-400">
+   956→              <Users className="w-4 h-4" />
+   957→              العملاء
+   958→            </TabsTrigger>
+   959→            <TabsTrigger value="campaigns" className="gap-2 data-[state=active]:bg-[#d4a853]/15 data-[state=active]:text-[#d4a853] text-gray-400">
+   960→              <Send className="w-4 h-4" />
+   961→              الحملات
+   962→            </TabsTrigger>
+   963→            <TabsTrigger value="analytics" className="gap-2 data-[state=active]:bg-[#d4a853]/15 data-[state=active]:text-[#d4a853] text-gray-400">
+   964→              <BarChart3 className="w-4 h-4" />
+   965→              التحليلات
+   966→            </TabsTrigger>
+   967→          </TabsList>
+   968→
+   969→          <TabsContent value="customers">
+   970→            <CustomersTab />
+   971→          </TabsContent>
+   972→          <TabsContent value="campaigns">
+   973→            <CampaignsTab />
+   974→          </TabsContent>
+   975→          <TabsContent value="analytics">
+   976→            <AnalyticsTab />
+   977→          </TabsContent>
+   978→        </Tabs>
+   979→      </div>
+   980→    </div>
+   981→  );
+   982→}

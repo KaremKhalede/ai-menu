@@ -1,0 +1,746 @@
+     1→'use client';
+     2→
+     3→import { useState, useRef, useEffect, useCallback } from 'react';
+     4→import {
+     5→  MessageCircle,
+     6→  Mail,
+     7→  Phone,
+     8→  ArrowLeft,
+     9→  Shield,
+    10→  Zap,
+    11→  Eye,
+    12→  EyeOff,
+    13→  Loader2,
+    14→  CheckCircle2,
+    15→  Sparkles,
+    16→  ChefHat,
+    17→  Coffee,
+    18→  UtensilsCrossed,
+    19→} from 'lucide-react';
+    20→import { motion, AnimatePresence } from 'framer-motion';
+    21→import { Button } from '@/components/ui/button';
+    22→import { Input } from '@/components/ui/input';
+    23→import { useStore } from '@/lib/store';
+    24→
+    25→/* ------------------------------------------------------------------ */
+    26→/*  Types                                                              */
+    27→/* ------------------------------------------------------------------ */
+    28→
+    29→type LoginStep =
+    30→  | 'method'
+    31→  | 'phone'
+    32→  | 'otp'
+    33→  | 'email'
+    34→  | 'email-success'
+    35→  | 'loading'
+    36→  | 'error';
+    37→
+    38→/* ------------------------------------------------------------------ */
+    39→/*  Animation variants                                                 */
+    40→/* ------------------------------------------------------------------ */
+    41→
+    42→const cardVariant = {
+    43→  hidden: { opacity: 0, scale: 0.95 },
+    44→  visible: {
+    45→    opacity: 1,
+    46→    scale: 1,
+    47→    transition: { duration: 0.45, ease: 'easeOut' },
+    48→  },
+    49→  exit: {
+    50→    opacity: 0,
+    51→    scale: 0.95,
+    52→    transition: { duration: 0.3, ease: 'easeIn' },
+    53→  },
+    54→};
+    55→
+    56→const fadeUp = {
+    57→  hidden: { opacity: 0, y: 16 },
+    58→  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+    59→};
+    60→
+    61→const bounceIn = {
+    62→  hidden: { opacity: 0, scale: 0 },
+    63→  visible: {
+    64→    opacity: 1,
+    65→    scale: 1,
+    66→    transition: { type: 'spring', stiffness: 300, damping: 15, delay: 0.1 },
+    67→  },
+    68→};
+    69→
+    70→/* ------------------------------------------------------------------ */
+    71→/*  Background decorations                                             */
+    72→/* ------------------------------------------------------------------ */
+    73→
+    74→function LoginBackground() {
+    75→  return (
+    76→    <div className="pointer-events-none fixed inset-0" aria-hidden>
+    77→      <div className="absolute -top-32 right-1/4 h-80 w-80 rounded-full bg-[#d4a853]/10 blur-[120px]" />
+    78→      <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-[#d4a853]/8 blur-[100px]" />
+    79→      <div className="absolute top-1/2 left-16 h-48 w-48 rounded-full bg-[#d4a853]/5 blur-[80px]" />
+    80→      {/* Subtle dot pattern */}
+    81→      <div
+    82→        className="absolute inset-0 opacity-[0.03]"
+    83→        style={{
+    84→          backgroundImage:
+    85→            'radial-gradient(circle, #d4a853 1px, transparent 1px)',
+    86→          backgroundSize: '32px 32px',
+    87→        }}
+    88→      />
+    89→    </div>
+    90→  );
+    91→}
+    92→
+    93→/* ------------------------------------------------------------------ */
+    94→/*  OTP Input Box                                                      */
+    95→/* ------------------------------------------------------------------ */
+    96→
+    97→function OtpBox({
+    98→  index,
+    99→  value,
+   100→  onChange,
+   101→  onBackspace,
+   102→  onFocus,
+   103→  autoFocus,
+   104→}: {
+   105→  index: number;
+   106→  value: string;
+   107→  onChange: (i: number, v: string) => void;
+   108→  onBackspace: (i: number) => void;
+   109→  onFocus?: () => void;
+   110→  autoFocus?: boolean;
+   111→}) {
+   112→  const ref = useRef<HTMLInputElement>(null);
+   113→
+   114→  useEffect(() => {
+   115→    if (autoFocus) ref.current?.focus();
+   116→  }, [autoFocus]);
+   117→
+   118→  return (
+   119→    <motion.input
+   120→      ref={ref}
+   121→      key={index}
+   122→      type="text"
+   123→      inputMode="numeric"
+   124→      maxLength={1}
+   125→      value={value}
+   126→      autoFocus={autoFocus}
+   127→      variants={fadeUp}
+   128→      custom={index}
+   129→      className="h-14 w-12 rounded-xl border border-border bg-background/60 text-center text-2xl font-bold text-foreground outline-none transition-all focus:border-[#d4a853] focus:ring-2 focus:ring-[#d4a853]/30 sm:h-16 sm:w-14 sm:text-3xl"
+   130→      onChange={(e) => {
+   131→        const digit = e.target.value.replace(/\D/g, '');
+   132→        if (digit) {
+   133→          onChange(index, digit);
+   134→        }
+   135→      }}
+   136→      onKeyDown={(e) => {
+   137→        if (e.key === 'Backspace' && !value) {
+   138→          onBackspace(index);
+   139→        }
+   140→      }}
+   141→      onFocus={onFocus}
+   142→    />
+   143→  );
+   144→}
+   145→
+   146→/* ------------------------------------------------------------------ */
+   147→/*  Main Component                                                     */
+   148→/* ------------------------------------------------------------------ */
+   149→
+   150→export default function Login() {
+   151→  const { setUser, setView } = useStore();
+   152→
+   153→  const [step, setStep] = useState<LoginStep>('method');
+   154→  const [phone, setPhone] = useState('');
+   155→  const [email, setEmail] = useState('');
+   156→  const [otp, setOtp] = useState<string[]>(Array(6).fill(''));
+   157→  const [resendTimer, setResendTimer] = useState(0);
+   158→  const [showPassword, setShowPassword] = useState(false);
+   159→  const [error, setError] = useState('');
+   160→
+   161→  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+   162→
+   163→  /* ---------- Actions ---------- */
+   164→  const handleVerifyOtp = () => {
+   165→    setStep('loading');
+   166→    setTimeout(() => {
+   167→      setUser({
+   168→        id: crypto.randomUUID(),
+   169→        name: '',
+   170→        phone: `+966${phone}`,
+   171→        email: '',
+   172→        role: 'owner',
+   173→      });
+   174→      setView('onboarding');
+   175→    }, 1500);
+   176→  };
+   177→
+   178→  const handleSendOtp = () => {
+   179→    if (phone.length < 9) return;
+   180→    setStep('loading');
+   181→    setTimeout(() => {
+   182→      setStep('otp');
+   183→      setResendTimer(60);
+   184→    }, 1200);
+   185→  };
+   186→
+   187→  /* ---------- Resend timer ---------- */
+   188→  useEffect(() => {
+   189→    if (resendTimer <= 0) return;
+   190→    const t = setInterval(() => setResendTimer((p) => p - 1), 1000);
+   191→    return () => clearInterval(t);
+   192→  }, [resendTimer]);
+   193→
+   194→  /* ---------- Auto‑submit OTP ---------- */
+   195→  useEffect(() => {
+   196→    if (otp.every((d) => d !== '') && step === 'otp') {
+   197→      const id = requestAnimationFrame(() => handleVerifyOtp());
+   198→      return () => cancelAnimationFrame(id);
+   199→    }
+   200→  }, [otp, step, handleVerifyOtp]);
+   201→
+   202→  /* ---------- OTP handlers ---------- */
+   203→  const handleOtpChange = useCallback(
+   204→    (index: number, digit: string) => {
+   205→      const next = [...otp];
+   206→      next[index] = digit;
+   207→      setOtp(next);
+   208→      setError('');
+   209→
+   210→      // Focus next box
+   211→      if (index < 5 && digit) {
+   212→        otpRefs.current[index + 1]?.focus();
+   213→      }
+   214→    },
+   215→    [otp],
+   216→  );
+   217→
+   218→  const handleOtpBackspace = useCallback(
+   219→    (index: number) => {
+   220→      if (index > 0) {
+   221→        otpRefs.current[index - 1]?.focus();
+   222→      }
+   223→    },
+   224→    [],
+   225→  );
+   226→
+   227→  /* ---------- More actions ---------- */
+   228→  const handleSendMagicLink = () => {
+   229→    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+   230→      setError('يرجى إدخال بريد إلكتروني صحيح');
+   231→      return;
+   232→    }
+   233→    setStep('loading');
+   234→    setTimeout(() => {
+   235→      setStep('email-success');
+   236→    }, 1500);
+   237→  };
+   238→
+   239→  const handleDemoLogin = () => {
+   240→    setUser({
+   241→      id: 'demo',
+   242→      name: 'أحمد المطعمي',
+   243→      phone: '+966501234567',
+   244→      email: 'demo@menuai.sa',
+   245→      role: 'owner',
+   246→    });
+   247→    setView('onboarding');
+   248→  };
+   249→
+   250→  const handleResend = () => {
+   251→    if (resendTimer > 0) return;
+   252→    setResendTimer(60);
+   253→    // Simulate resend
+   254→  };
+   255→
+   256→  /* ---------- Render ---------- */
+   257→  return (
+   258→    <div dir="rtl" className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
+   259→      <LoginBackground />
+   260→
+   261→      <div className="relative z-10 w-full max-w-md">
+   262→        <AnimatePresence mode="wait">
+   263→          {/* ==================== STATE: METHOD SELECTION ==================== */}
+   264→          {step === 'method' && (
+   265→            <motion.div
+   266→              key="method"
+   267→              variants={cardVariant}
+   268→              initial="hidden"
+   269→              animate="visible"
+   270→              exit="exit"
+   271→              className="glass-card p-6 sm:p-8"
+   272→            >
+   273→              {/* Logo */}
+   274→              <motion.div
+   275→                variants={fadeUp}
+   276→                initial="hidden"
+   277→                animate="visible"
+   278→                className="mb-2 text-center"
+   279→              >
+   280→                <div className="flex items-center justify-center gap-2 mb-3">
+   281→                  <ChefHat className="size-7 text-[#d4a853]" />
+   282→                  <span className="text-3xl font-black gold-gradient-text select-none">
+   283→                    MenuAI
+   284→                  </span>
+   285→                </div>
+   286→                <p className="text-sm text-muted-foreground">
+   287→                  ابدأ في بناء منيو ذكي خلال 30 ثانية
+   288→                </p>
+   289→              </motion.div>
+   290→
+   291→              {/* Method buttons */}
+   292→              <motion.div
+   293→                variants={fadeUp}
+   294→                initial="hidden"
+   295→                animate="visible"
+   296→                className="mt-8 flex flex-col gap-4"
+   297→              >
+   298→                {/* WhatsApp */}
+   299→                <motion.button
+   300→                  whileHover={{ scale: 1.02 }}
+   301→                  whileTap={{ scale: 0.98 }}
+   302→                  onClick={() => setStep('phone')}
+   303→                  className="group relative flex items-center gap-4 rounded-xl gold-gradient p-5 text-right transition-shadow hover:shadow-lg hover:shadow-[#d4a853]/20"
+   304→                >
+   305→                  <div className="flex size-12 items-center justify-center rounded-xl bg-black/20">
+   306→                    <MessageCircle className="size-6 text-[#0a0a0f]" />
+   307→                  </div>
+   308→                  <div className="flex-1">
+   309→                    <div className="flex items-center gap-2">
+   310→                      <span className="text-base font-bold text-[#0a0a0f]">
+   311→                        تسجيل عبر واتساب
+   312→                      </span>
+   313→                      <span className="rounded-full bg-black/15 px-2 py-0.5 text-[10px] font-semibold text-[#0a0a0f]">
+   314→                        موصى به
+   315→                      </span>
+   316→                    </div>
+   317→                    <p className="mt-0.5 text-xs text-[#0a0a0f]/60">
+   318→                      الأسرع — رمز تحقق خلال ثوانٍ
+   319→                    </p>
+   320→                  </div>
+   321→                  <Zap className="size-5 text-[#0a0a0f]/50 transition-transform group-hover:-translate-x-1" />
+   322→                </motion.button>
+   323→
+   324→                {/* Email */}
+   325→                <motion.button
+   326→                  whileHover={{ scale: 1.02 }}
+   327→                  whileTap={{ scale: 0.98 }}
+   328→                  onClick={() => setStep('email')}
+   329→                  className="group flex items-center gap-4 rounded-xl border border-border bg-background/40 p-5 text-right transition-colors hover:border-[#d4a853]/30 hover:bg-[#d4a853]/5"
+   330→                >
+   331→                  <div className="flex size-12 items-center justify-center rounded-xl bg-[#d4a853]/10">
+   332→                    <Mail className="size-6 text-[#d4a853]" />
+   333→                  </div>
+   334→                  <div className="flex-1">
+   335→                    <span className="text-base font-bold text-foreground">
+   336→                      تسجيل عبر الإيميل
+   337→                    </span>
+   338→                    <p className="mt-0.5 text-xs text-muted-foreground">
+   339→                      رابط تسجيل دخول مباشر
+   340→                    </p>
+   341→                  </div>
+   342→                </motion.button>
+   343→              </motion.div>
+   344→
+   345→              {/* Bottom notes */}
+   346→              <motion.div
+   347→                variants={fadeUp}
+   348→                initial="hidden"
+   349→                animate="visible"
+   350→                className="mt-6 space-y-3 text-center"
+   351→              >
+   352→                <p className="text-xs text-muted-foreground">
+   353→                  لا تحتاج بطاقة بنكية — ابدأ مجاناً
+   354→                </p>
+   355→                <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground/70">
+   356→                  <Shield className="size-3.5" />
+   357→                  <span>حماية متقدمة بتشفير 256-bit</span>
+   358→                </div>
+   359→              </motion.div>
+   360→            </motion.div>
+   361→          )}
+   362→
+   363→          {/* ==================== STATE: PHONE INPUT ==================== */}
+   364→          {(step === 'phone' || step === 'error') && (
+   365→            <motion.div
+   366→              key="phone"
+   367→              variants={cardVariant}
+   368→              initial="hidden"
+   369→              animate="visible"
+   370→              exit="exit"
+   371→              className="glass-card p-6 sm:p-8"
+   372→            >
+   373→              {/* Back button */}
+   374→              <motion.button
+   375→                variants={fadeUp}
+   376→                initial="hidden"
+   377→                animate="visible"
+   378→                onClick={() => {
+   379→                  setStep('method');
+   380→                  setError('');
+   381→                }}
+   382→                className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+   383→              >
+   384→                <ArrowLeft className="size-4" />
+   385→                <span>رجوع</span>
+   386→              </motion.button>
+   387→
+   388→              {/* Icon + title */}
+   389→              <motion.div variants={fadeUp} initial="hidden" animate="visible" className="text-center">
+   390→                <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-[#d4a853]/10">
+   391→                  <Phone className="size-7 text-[#d4a853]" />
+   392→                </div>
+   393→                <h2 className="text-xl font-bold">أدخل رقم الجوال</h2>
+   394→                <p className="mt-2 text-sm text-muted-foreground">
+   395→                  سنرسل لك رمز تحقق عبر واتساب
+   396→                </p>
+   397→              </motion.div>
+   398→
+   399→              {/* Phone input */}
+   400→              <motion.div variants={fadeUp} initial="hidden" animate="visible" className="mt-6">
+   401→                <div className="flex items-center gap-0 rounded-lg border border-border bg-background/60 focus-within:border-[#d4a853] focus-within:ring-2 focus-within:ring-[#d4a853]/20 transition-all">
+   402→                  {/* Saudi prefix */}
+   403→                  <div className="flex items-center gap-1.5 border-l border-border bg-muted/30 px-4 py-2.5">
+   404→                    <Coffee className="size-4 text-muted-foreground" />
+   405→                    <span className="text-sm font-semibold text-foreground">+966</span>
+   406→                  </div>
+   407→                  {/* Number input */}
+   408→                  <input
+   409→                    type="tel"
+   410→                    inputMode="numeric"
+   411→                    dir="ltr"
+   412→                    placeholder="5XXXXXXXX"
+   413→                    value={phone}
+   414→                    maxLength={9}
+   415→                    onChange={(e) => {
+   416→                      const digits = e.target.value.replace(/\D/g, '').slice(0, 9);
+   417→                      setPhone(digits);
+   418→                      setError('');
+   419→                    }}
+   420→                    className={`flex-1 bg-transparent px-4 py-2.5 text-base font-medium text-foreground outline-none placeholder:text-muted-foreground/50 ${
+   421→                      error ? 'text-destructive' : ''
+   422→                    }`}
+   423→                    autoFocus
+   424→                  />
+   425→                </div>
+   426→                {error && (
+   427→                  <motion.p
+   428→                    initial={{ opacity: 0, y: -4 }}
+   429→                    animate={{ opacity: 1, y: 0 }}
+   430→                    className="mt-2 text-xs text-destructive"
+   431→                  >
+   432→                    {error}
+   433→                  </motion.p>
+   434→                )}
+   435→              </motion.div>
+   436→
+   437→              {/* Submit */}
+   438→              <motion.div variants={fadeUp} initial="hidden" animate="visible" className="mt-6">
+   439→                <Button
+   440→                  onClick={handleSendOtp}
+   441→                  disabled={phone.length < 9}
+   442→                  className="w-full gold-gradient text-base font-semibold hover:opacity-90"
+   443→                  size="lg"
+   444→                >
+   445→                  إرسال رمز التحقق
+   446→                </Button>
+   447→              </motion.div>
+   448→
+   449→              {/* Terms */}
+   450→              <motion.p
+   451→                variants={fadeUp}
+   452→                initial="hidden"
+   453→                animate="visible"
+   454→                className="mt-4 text-center text-[11px] text-muted-foreground/60"
+   455→              >
+   456→                بتسجيلك أنت توافق على شروط الاستخدام وسياسة الخصوصية
+   457→              </motion.p>
+   458→            </motion.div>
+   459→          )}
+   460→
+   461→          {/* ==================== STATE: OTP VERIFICATION ==================== */}
+   462→          {step === 'otp' && (
+   463→            <motion.div
+   464→              key="otp"
+   465→              variants={cardVariant}
+   466→              initial="hidden"
+   467→              animate="visible"
+   468→              exit="exit"
+   469→              className="glass-card p-6 sm:p-8"
+   470→            >
+   471→              {/* Back button */}
+   472→              <motion.button
+   473→                variants={fadeUp}
+   474→                initial="hidden"
+   475→                animate="visible"
+   476→                onClick={() => {
+   477→                  setStep('phone');
+   478→                  setOtp(Array(6).fill(''));
+   479→                  setError('');
+   480→                }}
+   481→                className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+   482→              >
+   483→                <ArrowLeft className="size-4" />
+   484→                <span>رجوع</span>
+   485→              </motion.button>
+   486→
+   487→              {/* Animated icon */}
+   488→              <motion.div
+   489→                variants={bounceIn}
+   490→                initial="hidden"
+   491→                animate="visible"
+   492→                className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-[#d4a853]/10"
+   493→              >
+   494→                <Shield className="size-8 text-[#d4a853]" />
+   495→              </motion.div>
+   496→
+   497→              {/* Title */}
+   498→              <motion.div variants={fadeUp} initial="hidden" animate="visible" className="text-center">
+   499→                <h2 className="text-xl font-bold">أدخل رمز التحقق</h2>
+   500→                <p className="mt-2 text-sm text-muted-foreground">
+   501→                  تم إرسال رمز من 6 أرقام إلى +966{phone}
+   502→                </p>
+   503→              </motion.div>
+   504→
+   505→              {/* OTP boxes */}
+   506→              <motion.div
+   507→                variants={fadeUp}
+   508→                initial="hidden"
+   509→                animate="visible"
+   510→                className="mt-8 flex items-center justify-center gap-2 sm:gap-3"
+   511→              >
+   512→                {otp.map((digit, i) => (
+   513→                  <OtpBox
+   514→                    key={i}
+   515→                    index={i}
+   516→                    value={digit}
+   517→                    onChange={handleOtpChange}
+   518→                    onBackspace={handleOtpBackspace}
+   519→                    autoFocus={i === 0}
+   520→                  />
+   521→                ))}
+   522→              </motion.div>
+   523→
+   524→              {error && (
+   525→                <motion.p
+   526→                  initial={{ opacity: 0, y: -4 }}
+   527→                  animate={{ opacity: 1, y: 0 }}
+   528→                  className="mt-3 text-center text-xs text-destructive"
+   529→                >
+   530→                  {error}
+   531→                </motion.p>
+   532→              )}
+   533→
+   534→              {/* Resend */}
+   535→              <motion.div
+   536→                variants={fadeUp}
+   537→                initial="hidden"
+   538→                animate="visible"
+   539→                className="mt-6 text-center"
+   540→              >
+   541→                {resendTimer > 0 ? (
+   542→                  <p className="text-sm text-muted-foreground">
+   543→                    إعادة الإرسال خلال{' '}
+   544→                    <span className="font-semibold text-[#d4a853]">
+   545→                      {Math.floor(resendTimer / 60)}:{String(resendTimer % 60).padStart(2, '0')}
+   546→                    </span>
+   547→                  </p>
+   548→                ) : (
+   549→                  <button
+   550→                    onClick={handleResend}
+   551→                    className="text-sm font-semibold text-[#d4a853] transition-colors hover:text-[#e8c47c]"
+   552→                  >
+   553→                    إعادة إرسال الرمز
+   554→                  </button>
+   555→                )}
+   556→              </motion.div>
+   557→
+   558→              {/* Change number */}
+   559→              <motion.div
+   560→                variants={fadeUp}
+   561→                initial="hidden"
+   562→                animate="visible"
+   563→                className="mt-3 text-center"
+   564→              >
+   565→                <button
+   566→                  onClick={() => {
+   567→                    setStep('phone');
+   568→                    setOtp(Array(6).fill(''));
+   569→                  }}
+   570→                  className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+   571→                >
+   572→                  تغيير رقم الجوال
+   573→                </button>
+   574→              </motion.div>
+   575→            </motion.div>
+   576→          )}
+   577→
+   578→          {/* ==================== STATE: EMAIL INPUT ==================== */}
+   579→          {step === 'email' && (
+   580→            <motion.div
+   581→              key="email"
+   582→              variants={cardVariant}
+   583→              initial="hidden"
+   584→              animate="visible"
+   585→              exit="exit"
+   586→              className="glass-card p-6 sm:p-8"
+   587→            >
+   588→              {/* Back button */}
+   589→              <motion.button
+   590→                variants={fadeUp}
+   591→                initial="hidden"
+   592→                animate="visible"
+   593→                onClick={() => {
+   594→                  setStep('method');
+   595→                  setError('');
+   596→                }}
+   597→                className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+   598→              >
+   599→                <ArrowLeft className="size-4" />
+   600→                <span>رجوع</span>
+   601→              </motion.button>
+   602→
+   603→              {/* Icon + title */}
+   604→              <motion.div variants={fadeUp} initial="hidden" animate="visible" className="text-center">
+   605→                <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-[#d4a853]/10">
+   606→                  <Mail className="size-7 text-[#d4a853]" />
+   607→                </div>
+   608→                <h2 className="text-xl font-bold">أدخل بريدك الإلكتروني</h2>
+   609→                <p className="mt-2 text-sm text-muted-foreground">
+   610→                  سنرسل لك رابط تسجيل الدخول مباشرة
+   611→                </p>
+   612→              </motion.div>
+   613→
+   614→              {/* Email input */}
+   615→              <motion.div variants={fadeUp} initial="hidden" animate="visible" className="mt-6">
+   616→                <div
+   617→                  className={`flex items-center rounded-lg border transition-all ${
+   618→                    error
+   619→                      ? 'border-destructive ring-2 ring-destructive/20'
+   620→                      : 'border-border focus-within:border-[#d4a853] focus-within:ring-2 focus-within:ring-[#d4a853]/20'
+   621→                  } bg-background/60`}
+   622→                >
+   623→                  <Mail className="mr-4 size-5 text-muted-foreground" />
+   624→                  <input
+   625→                    type="email"
+   626→                    dir="ltr"
+   627→                    placeholder="name@example.com"
+   628→                    value={email}
+   629→                    onChange={(e) => {
+   630→                      setEmail(e.target.value);
+   631→                      setError('');
+   632→                    }}
+   633→                    className="w-full bg-transparent py-2.5 text-base text-foreground outline-none placeholder:text-muted-foreground/50"
+   634→                    autoFocus
+   635→                    onKeyDown={(e) => e.key === 'Enter' && handleSendMagicLink()}
+   636→                  />
+   637→                  <button
+   638→                    type="button"
+   639→                    onClick={() => setShowPassword(!showPassword)}
+   640→                    className="ml-3 text-muted-foreground hover:text-foreground transition-colors"
+   641→                  >
+   642→                    {showPassword ? (
+   643→                      <EyeOff className="size-4" />
+   644→                    ) : (
+   645→                      <Eye className="size-4" />
+   646→                    )}
+   647→                  </button>
+   648→                </div>
+   649→                {error && (
+   650→                  <motion.p
+   651→                    initial={{ opacity: 0, y: -4 }}
+   652→                    animate={{ opacity: 1, y: 0 }}
+   653→                    className="mt-2 text-xs text-destructive"
+   654→                  >
+   655→                    {error}
+   656→                  </motion.p>
+   657→                )}
+   658→              </motion.div>
+   659→
+   660→              {/* Submit */}
+   661→              <motion.div variants={fadeUp} initial="hidden" animate="visible" className="mt-6">
+   662→                <Button
+   663→                  onClick={handleSendMagicLink}
+   664→                  disabled={!email}
+   665→                  className="w-full gold-gradient text-base font-semibold hover:opacity-90"
+   666→                  size="lg"
+   667→                >
+   668→                  إرسال رابط تسجيل الدخول
+   669→                </Button>
+   670→              </motion.div>
+   671→            </motion.div>
+   672→          )}
+   673→
+   674→          {/* ==================== STATE: EMAIL SUCCESS ==================== */}
+   675→          {step === 'email-success' && (
+   676→            <motion.div
+   677→              key="email-success"
+   678→              variants={cardVariant}
+   679→              initial="hidden"
+   680→              animate="visible"
+   681→              exit="exit"
+   682→              className="glass-card p-6 sm:p-8 text-center"
+   683→            >
+   684→              <motion.div
+   685→                variants={bounceIn}
+   686→                initial="hidden"
+   687→                animate="visible"
+   688→                className="mx-auto mb-6 flex size-20 items-center justify-center rounded-full bg-[#d4a853]/10"
+   689→              >
+   690→                <CheckCircle2 className="size-10 text-[#d4a853]" />
+   691→              </motion.div>
+   692→
+   693→              <motion.div variants={fadeUp} initial="hidden" animate="visible">
+   694→                <h2 className="text-xl font-bold">تم إرسال رابط تسجيل الدخول!</h2>
+   695→                <p className="mt-2 text-sm text-muted-foreground">
+   696→                  تحقق من بريدك الإلكتروني
+   697→                </p>
+   698→              </motion.div>
+   699→
+   700→              <motion.div variants={fadeUp} initial="hidden" animate="visible" className="mt-8">
+   701→                <Button
+   702→                  onClick={handleDemoLogin}
+   703→                  variant="outline"
+   704→                  className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853]"
+   705→                >
+   706→                  <Sparkles className="size-4" />
+   707→                  للعرض التجريبي، اضغط هنا
+   708→                </Button>
+   709→              </motion.div>
+   710→
+   711→              <motion.div variants={fadeUp} initial="hidden" animate="visible" className="mt-4">
+   712→                <button
+   713→                  onClick={() => setStep('email')}
+   714→                  className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+   715→                >
+   716→                  تغيير البريد الإلكتروني
+   717→                </button>
+   718→              </motion.div>
+   719→            </motion.div>
+   720→          )}
+   721→
+   722→          {/* ==================== STATE: LOADING ==================== */}
+   723→          {step === 'loading' && (
+   724→            <motion.div
+   725→              key="loading"
+   726→              variants={cardVariant}
+   727→              initial="hidden"
+   728→              animate="visible"
+   729→              exit="exit"
+   730→              className="glass-card flex flex-col items-center justify-center p-10 sm:p-14"
+   731→            >
+   732→              <motion.div
+   733→                animate={{ rotate: 360 }}
+   734→                transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+   735→              >
+   736→                <Loader2 className="size-12 text-[#d4a853]" />
+   737→              </motion.div>
+   738→              <p className="mt-5 text-base font-semibold text-foreground">جارٍ التحقق...</p>
+   739→              <p className="mt-1 text-sm text-muted-foreground">يرجى الانتظار لحظة</p>
+   740→            </motion.div>
+   741→          )}
+   742→        </AnimatePresence>
+   743→      </div>
+   744→    </div>
+   745→  );
+   746→}

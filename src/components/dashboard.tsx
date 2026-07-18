@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   dailyRevenue,
   hourlyOrders,
@@ -217,8 +218,8 @@ function SeverityConfig(severity: 'high' | 'medium' | 'low') {
    ═══════════════════════════════════════════════════════════════ */
 
 function DashboardAuthGuard({ children, user }: { children: React.ReactNode; user: { name?: string } | null }) {
-  const { setView, isAuthenticated } = useStore();
-  if (!isAuthenticated) {
+  const router = useRouter();
+  if (!user) {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center gap-6 p-6 text-center">
         <div className="w-20 h-20 rounded-full bg-[#1a1a2e] flex items-center justify-center">
@@ -226,10 +227,10 @@ function DashboardAuthGuard({ children, user }: { children: React.ReactNode; use
         </div>
         <h2 className="text-2xl font-bold gold-gradient-text">لوحة التحكم</h2>
         <p className="text-muted-foreground max-w-sm">يجب تسجيل الدخول للوصول إلى لوحة التحكم وأدوات إدارة المطعم</p>
-        <Button onClick={() => setView('login')} className="gold-gradient hover:opacity-90">
+        <Button onClick={() => router.push('/login')} className="gold-gradient hover:opacity-90">
           تسجيل الدخول
         </Button>
-        <Button variant="ghost" onClick={() => setView('landing')}>
+        <Button variant="ghost" onClick={() => router.push('/')}>
           العودة للرئيسية
         </Button>
       </div>
@@ -315,7 +316,7 @@ function handleSmartSort() {
    ═══════════════════════════════════════════════════════════════ */
 
 export default function Dashboard() {
-  const { setView, isAuthenticated, user } = useStore();
+  const { setView, user } = useStore();
 
   // Enhanced AI insights with 2 new entries
   const allInsights = [
@@ -335,87 +336,16 @@ export default function Dashboard() {
   ];
 
   return (
-    <AuthGuard user={user}>
-    <div dir="rtl" className="min-h-screen bg-[#0a0a0f] text-[#f0ece4] pb-12">
-      {/* ══════════════ A. Top Bar ══════════════ */}
-      <div className="sticky top-0 z-30 backdrop-blur-xl bg-[#0a0a0f]/80 border-b border-white/[0.06]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex items-center justify-between mb-3 sm:mb-0">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl gold-gradient flex items-center justify-center">
-                <BarChart3 className="h-5 w-5 text-[#0a0a0f]" />
-              </div>
-              <h1 className="text-xl sm:text-2xl font-bold gold-gradient-text">
-                لوحة التحكم
-              </h1>
-              {user?.name && (
-                <span className="hidden sm:block text-xs text-muted-foreground mr-2">
-                  مرحباً، {user.name}
-                </span>
-              )}
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground hover:text-foreground shrink-0"
-              onClick={() => setView('settings')}
-            >
-              <Settings className="h-5 w-5" />
-            </Button>
-          </div>
-
-          {/* Navigation Buttons */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] text-xs whitespace-nowrap shrink-0"
-              onClick={() => setView('menu')}
-            >
-              <UtensilsCrossed className="h-3.5 w-3.5 ml-1" />
-              المنيو
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] text-xs whitespace-nowrap shrink-0"
-              onClick={() => setView('menu-editor')}
-            >
-              <LayoutGrid className="h-3.5 w-3.5 ml-1" />
-              محرر المنيو
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] text-xs whitespace-nowrap shrink-0"
-              onClick={() => setView('auto-menu-generator')}
-            >
-              <Sparkles className="h-3.5 w-3.5 ml-1" />
-              توليد قائمة AI
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] text-xs whitespace-nowrap shrink-0"
-              onClick={() => setView('heatmap')}
-            >
-              <MapPin className="h-3.5 w-3.5 ml-1" />
-              خريطة حرارية
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-[#d4a853]/30 text-[#d4a853] hover:bg-[#d4a853]/10 hover:text-[#d4a853] text-xs whitespace-nowrap shrink-0"
-              onClick={() => setView('crm')}
-            >
-              <Users className="h-3.5 w-3.5 ml-1" />
-              CRM
-            </Button>
-          </div>
-        </div>
+    <div className="bg-[#0a0a0f] text-[#f0ece4] py-6">
+      {/* Page Header */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold gold-gradient-text">لوحة التحكم</h1>
+        {user?.name && (
+          <p className="text-sm text-muted-foreground mt-1">مرحباً، {user.name}</p>
+        )}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
 
         {/* ══════════════ B. KPI Cards Row 1 — Main KPIs (6 cards) ══════════════ */}
         <motion.div
@@ -851,6 +781,5 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
-    </AuthGuard>
   );
 }

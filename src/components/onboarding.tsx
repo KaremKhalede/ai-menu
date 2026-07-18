@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Sparkles,
   CheckCircle2,
@@ -640,7 +641,8 @@ function StepSuccess({ onGoMenu, onGoDashboard }: { onGoMenu: () => void; onGoDa
 /* ------------------------------------------------------------------ */
 
 export default function Onboarding() {
-  const { setView, setRestaurant, restaurant } = useStore();
+  const { setRestaurant, restaurant } = useStore();
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [selectedType, setSelectedType] = useState(restaurant.type || '');
   const [acceptAI, setAcceptAI] = useState(true);
@@ -667,7 +669,7 @@ export default function Onboarding() {
       type: selectedType,
     };
     setRestaurant(finalRestaurant);
-    setView('dashboard');
+    router.push('/dashboard');
   };
 
   return (
