@@ -1,7 +1,7 @@
 'use client';
 
-import Onboarding from '@/components/onboarding';
+import { OnboardingPage } from '@/modules/onboarding';
 
-export default function OnboardingPage() {
-  return <Onboarding />;
+export default function OnboardingRoute() {
+  return <OnboardingPage />;
 }

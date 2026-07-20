@@ -6,11 +6,19 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start",
+    "build:e2e": "npx cross-env DATABASE_URL=\"file:./dev.test.db\" next build",
+    "start:e2e": "npx cross-env DATABASE_URL=\"file:./dev.test.db\" next start",
     "lint": "eslint .",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "test": "vitest run",
+    "test:unit": "vitest",
+    "test:e2e": "playwright test",
+    "test:coverage": "vitest run --coverage",
+    "test:eval": "npx cross-env DATABASE_URL=\"file:./dev.test.db\" NODE_ENV=test npx tsx tests/e2e/seed.ts && npx cross-env DATABASE_URL=\"file:./dev.test.db\" NODE_ENV=test npx tsx tests/evals/runner.ts",
+    "test:bench": "npx cross-env DATABASE_URL=\"file:./dev.test.db\" NODE_ENV=test npx tsx tests/perf/runner.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -81,14 +89,22 @@
     "zustand": "^5.0.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.0.3",
+    "@vitest/coverage-v8": "^4.1.10",
+    "autocannon": "^8.0.0",
     "bun-types": "^1.3.4",
     "eslint": "^9",
     "eslint-config-next": "^16.1.1",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

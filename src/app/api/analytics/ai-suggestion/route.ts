@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { rateLimit } from '@/lib/rate-limit';
 
 // ─── POST: تسجيل اقتراح ذكاء اصطناعي جديد ──────────────────────────────────
 
@@ -13,14 +14,35 @@ interface SuggestionInput {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: SuggestionInput = await request.json();
+    // Rate Limit: Max 100 suggestions logged per minute per IP
+    const limiter = rateLimit(request, { intervalMs: 60000, maxRequests: 100 });
+    if (!limiter.success) {
+      return NextResponse.json(
+        { error: 'تم تجاوز حد الاستخدام.' },
+        { status: 429 }
+      );
+    }
 
+    const body: SuggestionInput = await request.json();
     const { dishId, dishName, context, message, sessionId } = body;
 
     if (!dishId || !dishName || !context || !message) {
       return NextResponse.json(
         { error: 'جميع الحقول مطلوبة: dishId, dishName, context, message' },
         { status: 400 },
+      );
+    }
+
+    if (
+      typeof dishId !== 'string' ||
+      typeof dishName !== 'string' ||
+      typeof context !== 'string' ||
+      typeof message !== 'string' ||
+      (sessionId !== undefined && typeof sessionId !== 'string')
+    ) {
+      return NextResponse.json(
+        { error: 'نوع بيانات المدخلات غير صالح' },
+        { status: 400 }
       );
     }
 
@@ -40,10 +62,10 @@ export async function POST(request: NextRequest) {
         type: 'ai_suggestion',
         data: JSON.stringify({
           dishId,
-          dishName,
+          dishName: dishName.substring(0, 200).replace(/<[^>]*>/g, ''),
           context,
-          message,
-          sessionId: sessionId || null,
+          message: message.substring(0, 1000).replace(/<[^>]*>/g, ''),
+          sessionId: sessionId ? sessionId.substring(0, 100) : null,
           converted: false,
           createdAt: new Date().toISOString(),
         }),
@@ -81,14 +103,29 @@ interface ConversionInput {
 
 export async function PUT(request: NextRequest) {
   try {
-    const body: ConversionInput = await request.json();
+    // Rate Limit: Max 100 conversions logged per minute per IP
+    const limiter = rateLimit(request, { intervalMs: 60000, maxRequests: 100 });
+    if (!limiter.success) {
+      return NextResponse.json(
+        { error: 'تم تجاوز حد الاستخدام.' },
+        { status: 429 }
+      );
+    }
 
+    const body: ConversionInput = await request.json();
     const { suggestionId, converted, orderValue } = body;
 
     if (!suggestionId || converted === undefined) {
       return NextResponse.json(
         { error: 'الحقول المطلوبة: suggestionId, converted' },
         { status: 400 },
+      );
+    }
+
+    if (typeof suggestionId !== 'string' || typeof converted !== 'boolean' || (orderValue !== undefined && typeof orderValue !== 'number')) {
+      return NextResponse.json(
+        { error: 'نوع بيانات المدخلات غير صالح' },
+        { status: 400 }
       );
     }
 

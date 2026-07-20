@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useStore } from '@/lib/store';
+import { useShallow } from 'zustand/react/shallow';
 import dynamic from 'next/dynamic';
 import type { ViewType } from '@/lib/types';
 
@@ -25,7 +26,12 @@ const viewComponents: Partial<Record<ViewType, React.ComponentType>> = {
 };
 
 export default function DashboardPage() {
-  const { view, setView } = useStore();
+  const { view, setView } = useStore(
+    useShallow((state) => ({
+      view: state.view,
+      setView: state.setView,
+    }))
+  );
 
   // Default to dashboard view when first entering
   useEffect(() => {

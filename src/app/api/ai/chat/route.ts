@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ZAI from 'z-ai-web-dev-sdk';
 import { getSystemPrompt, getGreeting } from '@/lib/voice-personality';
+import { rateLimit } from '@/lib/rate-limit';
 import type { PersonalityMode } from '@/lib/types';
 
 const VALID_MODES: PersonalityMode[] = ['luxury', 'friendly', 'professional', 'casual', 'playful'];
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 20 chats per minute per IP
+    const limiter = rateLimit(req, { intervalMs: 60000, maxRequests: 20 });
+    if (!limiter.success) {
+      return NextResponse.json(
+        { response: 'عذراً، لقد تجاوزت عدد الرسائل المسموح به. يرجى المحاولة بعد قليل.' },
+        { status: 429 }
+      );
+    }
+
     const {
       message,
       dishContext,
@@ -17,12 +27,18 @@ export async function POST(req: NextRequest) {
 
     const mode: PersonalityMode = VALID_MODES.includes(personalityMode) ? personalityMode : 'luxury';
 
-    if (!message) {
+    if (!message || typeof message !== 'string') {
       return NextResponse.json(
         { response: getGreeting(mode) },
         { status: 400 }
       );
     }
+
+    // Sanitize user message: basic length and script tag prevention
+    const sanitizedMessage = message
+      .trim()
+      .substring(0, 1000) // Prevent payload exhaustion
+      .replace(/<[^>]*>/g, ''); // Simple HTML tag removal
 
     // Build the full system prompt using the voice personality engine
     const systemPrompt = getSystemPrompt(mode, dishContext, cartItems);
@@ -36,13 +52,18 @@ export async function POST(req: NextRequest) {
     if (history && Array.isArray(history)) {
       for (const msg of history) {
         if (msg.role === 'user' || msg.role === 'assistant') {
-          messages.push({ role: msg.role, content: msg.content });
+          if (msg.content && typeof msg.content === 'string') {
+            messages.push({
+              role: msg.role,
+              content: msg.content.replace(/<[^>]*>/g, '').substring(0, 1000),
+            });
+          }
         }
       }
     }
 
     // Add current user message
-    messages.push({ role: 'user', content: message });
+    messages.push({ role: 'user', content: sanitizedMessage });
 
     // Try to call LLM
     try {

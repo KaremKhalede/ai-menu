@@ -1,15 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyMagicLink } from '@/lib/otp-store';
 import { db } from '@/lib/db';
+import { rateLimit } from '@/lib/rate-limit';
 import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 10 attempts per 10 minutes
+    const limiter = rateLimit(req, { intervalMs: 60000 * 10, maxRequests: 10 });
+    if (!limiter.success) {
+      return NextResponse.json(
+        { success: false, message: 'تم تجاوز حد المحاولات المسموح به. يرجى المحاولة لاحقاً.' },
+        { status: 429 }
+      );
+    }
+
     const { email, token } = await req.json();
 
-    if (!email || !token) {
+    if (!email || !token || typeof email !== 'string' || typeof token !== 'string') {
       return NextResponse.json(
-        { success: false, message: 'البريد والرمز مطلوبان' },
+        { success: false, message: 'البريد والرمز مطلوبان وصالحان' },
+        { status: 400 }
+      );
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json(
+        { success: false, message: 'تنسيق البريد الإلكتروني غير صالح' },
         { status: 400 }
       );
     }

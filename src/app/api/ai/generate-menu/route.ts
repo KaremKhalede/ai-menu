@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ZAI from 'z-ai-web-dev-sdk';
+import { getSessionUser, authorizeRoles } from '@/lib/auth-helper';
+import { rateLimit } from '@/lib/rate-limit';
 import type { Category, Dish } from '@/lib/types';
 
 /* ───────────────────── System Prompt ───────────────────── */
@@ -355,6 +357,31 @@ function validateAndTransform(data: GeneratedMenu): { restaurantName: string; ca
 
 export async function POST(req: NextRequest) {
   try {
+    // Auth Check
+    const user = await getSessionUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'غير مصرح لإنشاء القائمة' },
+        { status: 401 }
+      );
+    }
+
+    if (!authorizeRoles(user, ['owner', 'manager'])) {
+      return NextResponse.json(
+        { error: 'صلاحيات غير كافية' },
+        { status: 403 }
+      );
+    }
+
+    // Rate Limit: 5 menu generation requests per hour
+    const limiter = rateLimit(req, { intervalMs: 3600000, maxRequests: 5 });
+    if (!limiter.success) {
+      return NextResponse.json(
+        { error: 'تم تجاوز حد التوليد. يرجى المحاولة بعد ساعة.' },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const {
       restaurantType,
@@ -405,16 +432,13 @@ export async function POST(req: NextRequest) {
         (typeof completion === 'string' ? completion : null);
 
       if (responseText) {
-        // Try to extract JSON from the response
         let jsonStr = responseText.trim();
 
-        // Remove markdown code blocks if present
         const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
         if (jsonMatch) {
           jsonStr = jsonMatch[1].trim();
         }
 
-        // Try to find JSON object
         const firstBrace = jsonStr.indexOf('{');
         const lastBrace = jsonStr.lastIndexOf('}');
         if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
@@ -423,7 +447,6 @@ export async function POST(req: NextRequest) {
 
         const parsed = JSON.parse(jsonStr) as GeneratedMenu;
 
-        // Validate that we have categories with dishes
         if (parsed.categories && Array.isArray(parsed.categories) && parsed.categories.length > 0) {
           const result = validateAndTransform(parsed);
           return NextResponse.json(result);
@@ -433,7 +456,6 @@ export async function POST(req: NextRequest) {
       console.error('AI generation failed, using fallback:', llmError);
     }
 
-    // Fallback: return hardcoded sample menu
     const fallback = generateFallbackMenu();
     return NextResponse.json(fallback);
   } catch (error) {

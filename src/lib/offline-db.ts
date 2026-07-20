@@ -48,7 +48,7 @@ export async function cacheMenu(categories: unknown[]): Promise<void> {
   const db = await openDB();
   const tx = db.transaction('cached-menu', 'readwrite');
   tx.objectStore('cached-menu').put(categories, 'menu');
-  await tx.done;
+  
   db.close();
 }
 
@@ -56,7 +56,7 @@ export async function getCachedMenu(): Promise<unknown | undefined> {
   const db = await openDB();
   const tx = db.transaction('cached-menu', 'readonly');
   const result = await tx.objectStore('cached-menu').get('menu');
-  await tx.done;
+  
   db.close();
   return result;
 }
@@ -70,7 +70,7 @@ export async function addPendingOrder(order: Record<string, unknown>): Promise<v
     ...order,
     createdAt: new Date().toISOString(),
   });
-  await tx.done;
+  
   db.close();
 
   // Register background sync if available
@@ -89,8 +89,15 @@ export async function addPendingOrder(order: Record<string, unknown>): Promise<v
 export async function getPendingOrders(): Promise<unknown[]> {
   const db = await openDB();
   const tx = db.transaction('pending-orders', 'readonly');
-  const result = await tx.objectStore('pending-orders').getAll();
-  await tx.done;
+  const store = tx.objectStore('pending-orders');
+
+  const result = await new Promise<unknown[]>((resolve, reject) => {
+    const request = store.getAll();
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+
   db.close();
   return result;
 }
@@ -99,7 +106,7 @@ export async function clearPendingOrders(): Promise<void> {
   const db = await openDB();
   const tx = db.transaction('pending-orders', 'readwrite');
   tx.objectStore('pending-orders').clear();
-  await tx.done;
+  
   db.close();
 }
 
@@ -113,7 +120,7 @@ export async function trackAISuggestion(suggestion: Record<string, unknown>): Pr
     id: suggestion.id || crypto.randomUUID(),
     timestamp: new Date().toISOString(),
   });
-  await tx.done;
+  
   db.close();
 }
 
@@ -127,7 +134,7 @@ export async function trackHeatmapEvent(event: Record<string, unknown>): Promise
     type: event.type || 'heatmap',
     timestamp: new Date().toISOString(),
   });
-  await tx.done;
+  
   db.close();
 
   // Register background sync for analytics if available
@@ -146,16 +153,24 @@ export async function trackHeatmapEvent(event: Record<string, unknown>): Promise
 export async function getAnalyticsEvents(): Promise<unknown[]> {
   const db = await openDB();
   const tx = db.transaction('analytics-events', 'readonly');
-  const result = await tx.objectStore('analytics-events').getAll();
-  await tx.done;
+  const store = tx.objectStore('analytics-events');
+
+  const result = await new Promise<unknown[]>((resolve, reject) => {
+    const request = store.getAll();
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+
   db.close();
   return result;
 }
+
 
 export async function clearAnalyticsEvents(): Promise<void> {
   const db = await openDB();
   const tx = db.transaction('analytics-events', 'readwrite');
   tx.objectStore('analytics-events').clear();
-  await tx.done;
+  
   db.close();
 }

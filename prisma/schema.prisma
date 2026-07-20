@@ -8,19 +8,19 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  name          String?
-  email         String?  @unique
-  phone         String?  @unique
-  role          String   @default("owner")  // owner, manager, staff
-  avatar        String?
-  isOnboarded   Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  restaurantId  String?
-  restaurant    Restaurant? @relation(fields: [restaurantId], references: [id])
-  sessions      Session[]
+  id          String   @id @default(cuid())
+  name        String?
+  email       String?  @unique
+  phone       String?  @unique
+  role        String   @default("owner") // owner, manager, staff
+  avatar      String?
+  isOnboarded Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  restaurantId String?
+  restaurant   Restaurant? @relation(fields: [restaurantId], references: [id])
+  sessions     Session[]
 }
 
 model Session {
@@ -29,8 +29,97 @@ model Session {
   userId    String
   expiresAt DateTime
   createdAt DateTime @default(now())
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Customer {
+  id           String  @id @default(cuid())
+  restaurantId String
+  fullName     String
+  phone        String
+  email        String?
+  avatarUrl    String?
+  notes        String?
+
+  totalOrders       Int       @default(0)
+  totalSpent        Float     @default(0)
+  averageOrderValue Float     @default(0)
+  lastOrderAt       DateTime?
+  firstOrderAt      DateTime?
+
+  marketingOptIn Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  restaurant          Restaurant           @relation(fields: [restaurantId], references: [id])
+  orders              Order[]
+  events              CustomerEvent[]
+  loyaltyAccount      LoyaltyAccount?
+  loyaltyTransactions LoyaltyTransaction[]
+  rewardRedemptions   RewardRedemption[]
+
+  @@unique([restaurantId, phone])
+  @@index([restaurantId])
+}
+
+model LoyaltyAccount {
+  id           String @id @default(cuid())
+  customerId   String @unique
+  restaurantId String
+
+  currentPoints          Int @default(0)
+  lifetimeEarnedPoints   Int @default(0)
+  lifetimeRedeemedPoints Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customer     Customer             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant           @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  transactions LoyaltyTransaction[]
+
+  @@index([restaurantId])
+}
+
+model LoyaltyTransaction {
+  id               String @id @default(cuid())
+  loyaltyAccountId String
+  customerId       String
+  restaurantId     String
+
+  transactionType String
+  points          Int
+  balanceAfter    Int
+  orderId         String?
+  metadata        String  @default("{}")
+
+  createdAt DateTime @default(now())
+
+  loyaltyAccount   LoyaltyAccount    @relation(fields: [loyaltyAccountId], references: [id], onDelete: Cascade)
+  customer         Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  restaurant       Restaurant        @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  rewardRedemption RewardRedemption?
+
+  @@index([loyaltyAccountId, createdAt(sort: Desc)])
+  @@index([restaurantId])
+  @@index([customerId])
+}
+
+model CustomerEvent {
+  id           String   @id @default(cuid())
+  customerId   String
+  restaurantId String
+  eventType    String // e.g. "ORDER_CREATED", "ORDER_COMPLETED", "CUSTOMER_CREATED"
+  metadata     String   @default("{}") // JSON
+  createdAt    DateTime @default(now())
+
+  customer   Customer   @relation(fields: [customerId], references: [id])
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+
+  @@index([customerId, createdAt(sort: Desc)])
+  @@index([restaurantId])
 }
 
 model Restaurant {
@@ -44,71 +133,199 @@ model Restaurant {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  categories  Category[]
-  orders      Order[]
-  users       User[]
+  categories          Category[]
+  orders              Order[]
+  users               User[]
+  customers           Customer[]
+  customerEvents      CustomerEvent[]
+  loyaltyAccounts     LoyaltyAccount[]
+  loyaltyTransactions LoyaltyTransaction[]
+  rewards             Reward[]
+  rewardRedemptions   RewardRedemption[]
+  notifications       Notification[]
+  promotions          Promotion[]
 }
 
 model Category {
-  id          String   @id @default(cuid())
-  name        String
-  nameEn      String?
-  icon        String?
-  sortOrder   Int      @default(0)
-  restaurantId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  restaurant  Restaurant @relation(fields: [restaurantId], references: [id])
-  dishes      Dish[]
-}
-
-model Dish {
   id           String   @id @default(cuid())
   name         String
   nameEn       String?
-  description  String
-  price        Float
-  image        String?
-  categoryId   String
-  rating       Float    @default(4.5)
-  orderCount   Int      @default(0)
-  tags         String   @default("[]")
-  isAvailable  Boolean  @default(true)
-  isFeatured   Boolean  @default(false)
-  addons       String   @default("[]")
-  pairings     String   @default("[]")
+  icon         String?
+  sortOrder    Int      @default(0)
+  restaurantId String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  category     Category @relation(fields: [categoryId], references: [id])
-  orderItems   OrderItem[]
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+  dishes     Dish[]
+}
+
+model Reward {
+  id           String  @id @default(cuid())
+  restaurantId String
+  name         String
+  description  String?
+
+  rewardType    String
+  pointsCost    Int
+  monetaryValue Float?
+  imageUrl      String?
+
+  active     Boolean   @default(true)
+  startsAt   DateTime?
+  endsAt     DateTime?
+  usageLimit Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  restaurant  Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  redemptions RewardRedemption[]
+
+  @@index([restaurantId, active])
+  @@index([rewardType])
+  @@index([deletedAt])
+}
+
+model RewardRedemption {
+  id           String @id @default(cuid())
+  restaurantId String
+  customerId   String
+  rewardId     String
+
+  loyaltyTransactionId String @unique
+
+  pointsSpent      Int
+  rewardSnapshot   String
+  redemptionStatus String
+  idempotencyKey   String?
+
+  redeemedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  restaurant         Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  customer           Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  reward             Reward             @relation(fields: [rewardId], references: [id], onDelete: Restrict)
+  loyaltyTransaction LoyaltyTransaction @relation(fields: [loyaltyTransactionId], references: [id], onDelete: Restrict)
+
+  @@unique([restaurantId, idempotencyKey])
+  @@index([restaurantId, customerId, createdAt(sort: Desc)])
+}
+
+model Notification {
+  id           String @id @default(cuid())
+  restaurantId String
+
+  recipientType String
+  recipientId   String?
+
+  notificationType String
+
+  title    String
+  message  String
+  metadata String @default("{}")
+
+  priority String
+  status   String @default("UNREAD")
+
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId, status])
+  @@index([restaurantId, recipientType, recipientId])
+  @@index([restaurantId, createdAt(sort: Desc)])
+}
+
+model Promotion {
+  id           String @id @default(cuid())
+  restaurantId String
+
+  name        String
+  description String?
+
+  promotionType String
+
+  value Float
+
+  minimumOrderAmount Float?
+  maximumDiscount    Float?
+
+  startsAt DateTime
+  endsAt   DateTime
+
+  active    Boolean @default(true)
+  priority  Int     @default(0)
+  stackable Boolean @default(false)
+
+  usageLimit       Int?
+  usagePerCustomer Int?
+
+  metadata String @default("{}")
+
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId, active, deletedAt])
+  @@index([restaurantId, startsAt, endsAt])
+}
+
+model Dish {
+  id          String   @id @default(cuid())
+  name        String
+  nameEn      String?
+  description String
+  price       Float
+  image       String?
+  categoryId  String
+  rating      Float    @default(4.5)
+  orderCount  Int      @default(0)
+  tags        String   @default("[]")
+  isAvailable Boolean  @default(true)
+  isFeatured  Boolean  @default(false)
+  addons      String   @default("[]")
+  pairings    String   @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category   Category    @relation(fields: [categoryId], references: [id])
+  orderItems OrderItem[]
 }
 
 model Order {
-  id            String   @id @default(cuid())
-  tableNumber   Int?
-  customerName  String?
-  total         Float
-  status        String   @default("pending")
-  restaurantId  String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(cuid())
+  tableNumber  Int?
+  customerName String?
+  total        Float
+  status       String   @default("pending")
+  restaurantId String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  restaurant    Restaurant @relation(fields: [restaurantId], references: [id])
-  items         OrderItem[]
+  restaurant Restaurant  @relation(fields: [restaurantId], references: [id])
+  items      OrderItem[]
+  customer   Customer?   @relation(fields: [customerId], references: [id])
+  customerId String?
 }
 
 model OrderItem {
-  id        String  @id @default(cuid())
-  orderId   String
-  dishId    String
-  quantity  Int     @default(1)
-  addons    String  @default("[]")
-  price     Float
+  id       String @id @default(cuid())
+  orderId  String
+  dishId   String
+  quantity Int    @default(1)
+  addons   String @default("[]")
+  price    Float
 
-  order     Order   @relation(fields: [orderId], references: [id])
-  dish      Dish    @relation(fields: [dishId], references: [id])
+  order Order @relation(fields: [orderId], references: [id])
+  dish  Dish  @relation(fields: [dishId], references: [id])
 }
 
 model AnalyticsEvent {
@@ -116,4 +333,76 @@ model AnalyticsEvent {
   type      String
   data      String   @default("{}")
   createdAt DateTime @default(now())
+}
+
+model BackgroundJob {
+  id      String @id @default(cuid())
+  jobType String
+
+  payload String @default("{}")
+  status  String @default("PENDING")
+
+  attempts    Int     @default(0)
+  maxAttempts Int     @default(3)
+  lastError   String?
+
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  failedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, scheduledAt])
+}
+
+model DistributedLock {
+  lockKey   String   @id
+  token     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  tenantId      String
+  actorId       String
+  action        String
+  entityType    String
+  entityId      String
+  beforeState   String?
+  afterState    String?
+  metadata      String?
+  correlationId String?
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId, entityType, entityId])
+  @@index([createdAt])
+}
+
+model FeatureFlag {
+  id                String   @id @default(cuid())
+  flagKey           String
+  environment       String   @default("production")
+  tenantId          String? // Nullable for global flags
+  enabled           Boolean  @default(false)
+  rolloutPercentage Int? // 0-100
+  conditions        String? // JSON
+  description       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([flagKey, environment, tenantId])
+}
+
+model IdempotencyRecord {
+  idempotencyKey   String   @id
+  requestHash      String
+  status           String // PROCESSING, COMPLETED, FAILED
+  responseSnapshot String? // JSON
+  createdAt        DateTime @default(now())
+  expiresAt        DateTime
+
+  @@index([expiresAt])
 }

@@ -1,116 +1,141 @@
-import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { 
+  withApiHandler, 
+  apiSuccess, 
+  validateBody, 
+  requireTenant,
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+  RateLimitError,
+  TenantRoles
+} from "@/lib/api-framework";
+import { createOrderSchema } from "@/lib/validations/order";
+import { CustomerService } from "@/services/CustomerService";
+import { RateLimitPolicies } from "@/lib/rate-limiting/RateLimitPolicies";
+import { NextRequest } from "next/server";
 
-interface OrderItemInput {
-  dishId: string;
-  quantity: number;
-  addons: { name: string; price: number }[];
-  price: number;
-}
+export const POST = withApiHandler(
+  async (req: NextRequest, ctx) => {
+    // 2. Tenant Resolution & Validation
+    const restaurantId = requireTenant(ctx.user);
+    const body = await validateBody(req, createOrderSchema);
 
-interface OrderInput {
-  items: OrderItemInput[];
-  total: number;
-  tableNumber?: number;
-  customerName?: string;
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const body: OrderInput = await request.json();
-
-    const { items, total, tableNumber, customerName } = body;
-
-    if (!items || items.length === 0) {
-      return NextResponse.json(
-        { error: "Order must contain at least one item" },
-        { status: 400 }
-      );
-    }
-
-    if (typeof total !== "number" || total <= 0) {
-      return NextResponse.json(
-        { error: "Valid total amount is required" },
-        { status: 400 }
-      );
-    }
-
-    // Get the first (or only) restaurant
-    const restaurant = await db.restaurant.findFirst({
-      select: { id: true },
+    // 3. Fetch all requested dishes to verify they exist and belong to the tenant
+    const dishIds = body.items.map(item => item.dishId);
+    const dishes = await db.dish.findMany({
+      where: {
+        id: { in: dishIds },
+        category: { restaurantId }, // Enforces tenant isolation
+      }
     });
 
-    if (!restaurant) {
-      return NextResponse.json(
-        { error: "No restaurant configured" },
-        { status: 400 }
-      );
-    }
-
-    // Validate all dish IDs exist
-    const dishIds = items.map((item) => item.dishId);
-    const existingDishes = await db.dish.findMany({
-      where: { id: { in: dishIds } },
-      select: { id: true },
-    });
-
-    const existingDishIds = new Set(existingDishes.map((d) => d.id));
-    const missingDishIds = dishIds.filter((id) => !existingDishIds.has(id));
+    // Check if any dishes were missing or cross-tenant
+    const existingDishIds = new Set(dishes.map(d => d.id));
+    const missingDishIds = dishIds.filter(id => !existingDishIds.has(id));
+    
     if (missingDishIds.length > 0) {
-      return NextResponse.json(
-        { error: `Invalid dish IDs: ${missingDishIds.join(", ")}` },
-        { status: 400 }
-      );
+      throw new NotFoundError(`One or more dishes not found or do not belong to your restaurant: ${missingDishIds.join(", ")}`);
     }
 
-    // Create the order with items in a transaction
-    const order = await db.$transaction(async (tx) => {
-      const createdOrder = await tx.order.create({
-        data: {
-          restaurantId: restaurant.id,
-          total,
-          tableNumber: tableNumber ?? null,
-          customerName: customerName ?? null,
-          status: "pending",
-          items: {
-            create: items.map((item) => ({
-              dishId: item.dishId,
-              quantity: item.quantity,
-              price: item.price,
-              addons: JSON.stringify(item.addons ?? []),
-            })),
-          },
-        },
-        include: {
-          items: true,
-        },
+    const dishMap = new Map(dishes.map(d => [d.id, d]));
+
+    // 4. Server-Side Price Calculation & Availability Verification
+    let orderTotal = 0;
+    const finalItems = body.items.map(item => {
+      const dish = dishMap.get(item.dishId)!;
+      
+      // Verify Availability
+      if (!dish.isAvailable) {
+        throw new ConflictError(`Dish ${dish.name} is currently unavailable`);
+      }
+
+      // Parse authentic dish addons from DB
+      let dbAddons: { name: string; price: number }[] = [];
+      try {
+        dbAddons = JSON.parse(dish.addons);
+      } catch (e) {
+        // Fallback to empty if DB has corrupted JSON
+      }
+
+      // Match requested addons with DB addons to get authentic server-side prices
+      const validAddons = item.addons.map(requestedAddon => {
+        const authenticAddon = dbAddons.find(a => a.name === requestedAddon.name);
+        if (!authenticAddon) {
+          throw new ValidationError(`Invalid addon '${requestedAddon.name}' for dish '${dish.name}'`);
+        }
+        return authenticAddon;
       });
 
-      // Update orderCount for each dish
-      for (const item of items) {
+      // Calculate unit price based ONLY on server-side values
+      const addonsPrice = validAddons.reduce((sum, a) => sum + a.price, 0);
+      const unitPrice = dish.price + addonsPrice;
+      const itemTotal = unitPrice * item.quantity;
+      
+      orderTotal += itemTotal;
+
+      return {
+        dishId: dish.id,
+        quantity: item.quantity,
+        unitPrice, 
+        addons: JSON.stringify(validAddons),
+      };
+    });
+
+    // 5. Database Transaction (Atomic Order Creation & Inventory Update)
+    const order = await db.$transaction(async (tx) => {
+      // Link customer if provided
+      let customerId: string | null = null;
+      if (body.customerPhone && body.customerName) {
+        const customer = await CustomerService.upsertCustomer(
+          tx,
+          restaurantId,
+          body.customerPhone,
+          body.customerName.replace(/<[^>]*>/g, '').substring(0, 100)
+        );
+        customerId = customer.id;
+      }
+
+      const createdOrder = await tx.order.create({
+        data: {
+          restaurantId,
+          customerId,
+          total: orderTotal, // Fully calculated on server
+          tableNumber: body.tableNumber ?? null,
+          customerName: body.customerName ? body.customerName.replace(/<[^>]*>/g, '').substring(0, 100) : null, // Sanitize
+          status: "pending",
+          items: {
+            create: finalItems.map(item => ({
+              dishId: item.dishId,
+              quantity: item.quantity,
+              price: item.unitPrice, 
+              addons: item.addons,
+            }))
+          }
+        },
+        include: { items: true }
+      });
+
+      // Update order counts for popularity tracking
+      for (const item of finalItems) {
         await tx.dish.update({
           where: { id: item.dishId },
-          data: { orderCount: { increment: item.quantity } },
+          data: { orderCount: { increment: item.quantity } }
         });
+      }
+
+      if (customerId) {
+        await CustomerService.logOrderCreated(tx, customerId, restaurantId, createdOrder.id, orderTotal);
       }
 
       return createdOrder;
     });
 
-    return NextResponse.json(order, { status: 201 });
-  } catch (error) {
-    console.error("Failed to create order:", error);
-
-    if (error instanceof SyntaxError) {
-      return NextResponse.json(
-        { error: "Invalid JSON in request body" },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: "Failed to create order" },
-      { status: 500 }
-    );
+    return apiSuccess({ order }, 201);
+  },
+  { 
+    requireAuth: true,
+    allowedRoles: [TenantRoles.OWNER, TenantRoles.MANAGER, TenantRoles.EMPLOYEE],
+    rateLimit: RateLimitPolicies.CRITICAL_OPERATIONS
   }
-}
+);

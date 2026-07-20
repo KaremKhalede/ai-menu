@@ -130,7 +130,7 @@ async function getAllSuggestions(): Promise<AISuggestion[]> {
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
       });
-      await tx.done;
+      
       db.close();
 
       const dbSuggestions = dbResults.map((r) => ({
@@ -272,7 +272,7 @@ export async function trackConversion(
           orderValue,
         });
       }
-      await tx.done;
+      
       db.close();
     } catch {
       // تجاهل
@@ -338,7 +338,7 @@ export async function trackNoConversion(suggestionId: string): Promise<void> {
           converted: false,
         });
       }
-      await tx.done;
+      
       db.close();
     } catch {
       // تجاهل

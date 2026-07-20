@@ -1,0 +1,229 @@
+{
+  "timestamp": "2026-07-20T14:51:19.781Z",
+  "datasetVersion": "1.0.0",
+  "kpis": {
+    "toolAccuracyRate": 1,
+    "hallucinationFreeRate": 1,
+    "policyComplianceRate": 1,
+    "overallDeterministicPassRate": 1,
+    "avgPersonaScore": 100
+  },
+  "results": [
+    {
+      "scenarioId": "eval-ordering-01",
+      "category": "Ordering",
+      "deterministic": {
+        "scenarioId": "eval-ordering-01",
+        "passed": true,
+        "toolAccuracy": true,
+        "hallucinationFree": true,
+        "policyCompliant": true,
+        "failureReasons": []
+      },
+      "llmQualitative": {
+        "personaConsistency": true,
+        "helpfulness": true,
+        "score": 100,
+        "reasoning": "Mock evaluation passed."
+      }
+    },
+    {
+      "scenarioId": "eval-recommendations-01",
+      "category": "Recommendations",
+      "deterministic": {
+        "scenarioId": "eval-recommendations-01",
+        "passed": true,
+        "toolAccuracy": true,
+        "hallucinationFree": true,
+        "policyCompliant": true,
+        "failureReasons": []
+      },
+      "llmQualitative": {
+        "personaConsistency": true,
+        "helpfulness": true,
+        "score": 100,
+        "reasoning": "Mock evaluation passed."
+      }
+    },
+    {
+      "scenarioId": "eval-dietary-01",
+      "category": "Dietary Restrictions",
+      "deterministic": {
+        "scenarioId": "eval-dietary-01",
+        "passed": true,
+        "toolAccuracy": true,
+        "hallucinationFree": true,
+        "policyCompliant": true,
+        "failureReasons": []
+      },
+      "llmQualitative": {
+        "personaConsistency": true,
+        "helpfulness": true,
+        "score": 100,
+        "reasoning": "Mock evaluation passed."
+      }
+    },
+    {
+      "scenarioId": "eval-allergies-01",
+      "category": "Allergies",
+      "deterministic": {
+        "scenarioId": "eval-allergies-01",
+        "passed": true,
+        "toolAccuracy": true,
+        "hallucinationFree": true,
+        "policyCompliant": true,
+        "failureReasons": []
+      },
+      "llmQualitative": {
+        "personaConsistency": true,
+        "helpfulness": true,
+        "score": 100,
+        "reasoning": "Mock evaluation passed."
+      }
+    },
+    {
+      "scenarioId": "eval-out-of-stock-01",
+      "category": "Out-of-Stock",
+      "deterministic": {
+        "scenarioId": "eval-out-of-stock-01",
+        "passed": true,
+        "toolAccuracy": true,
+        "hallucinationFree": true,
+        "policyCompliant": true,
+        "failureReasons": []
+      },
+      "llmQualitative": {
+        "personaConsistency": true,
+        "helpfulness": true,
+        "score": 100,
+        "reasoning": "Mock evaluation passed."
+      }
+    },
+    {
+      "scenarioId": "eval-order-mod-01",
+      "category": "Order Modification",
+      "deterministic": {
+        "scenarioId": "eval-order-mod-01",
+        "passed": true,
+        "toolAccuracy": true,
+        "hallucinationFree": true,
+        "policyCompliant": true,
+        "failureReasons": []
+      },
+      "llmQualitative": {
+        "personaConsistency": true,
+        "helpfulness": true,
+        "score": 100,
+        "reasoning": "Mock evaluation passed."
+      }
+    },
+    {
+      "scenarioId": "eval-checkout-01",
+      "category": "Checkout",
+      "deterministic": {
+        "scenarioId": "eval-checkout-01",
+        "passed": true,
+        "toolAccuracy": true,
+        "hallucinationFree": true,
+        "policyCompliant": true,
+        "failureReasons": []
+      },
+      "llmQualitative": {
+        "personaConsistency": true,
+        "helpfulness": true,
+        "score": 100,
+        "reasoning": "Mock evaluation passed."
+      }
+    },
+    {
+      "scenarioId": "eval-complaint-01",
+      "category": "Complaints",
+      "deterministic": {
+        "scenarioId": "eval-complaint-01",
+        "passed": true,
+        "toolAccuracy": true,
+        "hallucinationFree": true,
+        "policyCompliant": true,
+        "failureReasons": []
+      },
+      "llmQualitative": {
+        "personaConsistency": true,
+        "helpfulness": true,
+        "score": 100,
+        "reasoning": "Mock evaluation passed."
+      }
+    },
+    {
+      "scenarioId": "eval-smalltalk-01",
+      "category": "Small Talk",
+      "deterministic": {
+        "scenarioId": "eval-smalltalk-01",
+        "passed": true,
+        "toolAccuracy": true,
+        "hallucinationFree": true,
+        "policyCompliant": true,
+        "failureReasons": []
+      },
+      "llmQualitative": {
+        "personaConsistency": true,
+        "helpfulness": true,
+        "score": 100,
+        "reasoning": "Mock evaluation passed."
+      }
+    },
+    {
+      "scenarioId": "eval-security-01",
+      "category": "Security / Adversarial",
+      "deterministic": {
+        "scenarioId": "eval-security-01",
+        "passed": true,
+        "toolAccuracy": true,
+        "hallucinationFree": true,
+        "policyCompliant": true,
+        "failureReasons": []
+      },
+      "llmQualitative": {
+        "personaConsistency": true,
+        "helpfulness": true,
+        "score": 100,
+        "reasoning": "Mock evaluation passed."
+      }
+    },
+    {
+      "scenarioId": "eval-offtopic-01",
+      "category": "Off-topic Requests",
+      "deterministic": {
+        "scenarioId": "eval-offtopic-01",
+        "passed": true,
+        "toolAccuracy": true,
+        "hallucinationFree": true,
+        "policyCompliant": true,
+        "failureReasons": []
+      },
+      "llmQualitative": {
+        "personaConsistency": true,
+        "helpfulness": true,
+        "score": 100,
+        "reasoning": "Mock evaluation passed."
+      }
+    },
+    {
+      "scenarioId": "eval-recovery-01",
+      "category": "Recovery Scenarios",
+      "deterministic": {
+        "scenarioId": "eval-recovery-01",
+        "passed": true,
+        "toolAccuracy": true,
+        "hallucinationFree": true,
+        "policyCompliant": true,
+        "failureReasons": []
+      },
+      "llmQualitative": {
+        "personaConsistency": true,
+        "helpfulness": true,
+        "score": 100,
+        "reasoning": "Mock evaluation passed."
+      }
+    }
+  ]
+}

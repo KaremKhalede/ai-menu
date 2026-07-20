@@ -1,12 +1,6 @@
-import { NextResponse } from 'next/server';
-
-/**
- * GET /api/analytics/heatmap-summary
- *
- * Returns an aggregated heatmap summary.  In production this would query
- * the AnalyticsEvent table (type='heatmap') and compute real aggregations.
- * For the demo / SQLite prototype we return realistic mock data.
- */
+import { NextRequest, NextResponse } from 'next/server';
+import { getSessionUser, authorizeRoles } from '@/lib/auth-helper';
+import { rateLimit } from '@/lib/rate-limit';
 
 interface DishStat {
   dishId: string;
@@ -100,15 +94,31 @@ const mockResponse: HeatmapSummaryResponse = {
   ],
 };
 
-export async function GET() {
-  // In production: query AnalyticsEvent table, parse JSON data arrays,
-  // aggregate by dish, compute hotspots, etc.
-  //
-  // const events = await db.analyticsEvent.findMany({
-  //   where: { type: 'heatmap' },
-  //   orderBy: { createdAt: 'desc' },
-  // });
-  // ... aggregation logic ...
+export async function GET(req: NextRequest) {
+  // Authentication & Authorization Check
+  const user = await getSessionUser(req);
+  if (!user) {
+    return NextResponse.json(
+      { success: false, message: 'غير مصرح للوصول إلى هذه البيانات' },
+      { status: 401 }
+    );
+  }
+
+  if (!authorizeRoles(user, ['owner', 'manager'])) {
+    return NextResponse.json(
+      { success: false, message: 'صلاحيات غير كافية' },
+      { status: 403 }
+    );
+  }
+
+  // Rate limit: 30 requests per minute per IP
+  const limiter = rateLimit(req, { intervalMs: 60000, maxRequests: 30 });
+  if (!limiter.success) {
+    return NextResponse.json(
+      { success: false, message: 'تم تجاوز حد الطلبات. يرجى المحاولة بعد قليل.' },
+      { status: 429 }
+    );
+  }
 
   return NextResponse.json(mockResponse);
 }

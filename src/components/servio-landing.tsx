@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import {
   Menu,
   X,
@@ -51,7 +52,7 @@ const fadeUp = {
   visible: (delay: number = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94], delay },
+    transition: { duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] as const, delay },
   }),
 };
 
@@ -67,7 +68,7 @@ const scaleIn = {
   visible: (delay: number = 0) => ({
     opacity: 1,
     scale: 1,
-    transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94], delay },
+    transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as const, delay },
   }),
   exit: {
     opacity: 0,
@@ -76,15 +77,22 @@ const scaleIn = {
   },
 };
 
-const slideUp = {
+const slideUp: Variants = {
   hidden: { y: '100%' },
   visible: {
     y: 0,
-    transition: { type: 'spring', damping: 30, stiffness: 300 },
+    transition: {
+      type: 'spring' as const,
+      damping: 30,
+      stiffness: 300,
+    },
   },
   exit: {
     y: '100%',
-    transition: { duration: 0.35, ease: 'easeIn' },
+    transition: {
+      duration: 0.35,
+      ease: 'easeIn' as const,
+    },
   },
 };
 

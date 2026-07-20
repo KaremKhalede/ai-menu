@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import type { Category, Dish, Addon } from "@/lib/types";
+import { withApiHandler, apiSuccess, tenantWhere } from "@/lib/api-framework";
 
 function safeParseJSON<T>(value: string, fallback: T): T {
   try {
@@ -62,9 +62,10 @@ function transformCategory(category: {
   };
 }
 
-export async function GET() {
-  try {
+export const GET = withApiHandler(
+  async (req, ctx) => {
     const categories = await db.category.findMany({
+      where: tenantWhere(ctx.user),
       orderBy: { sortOrder: "asc" },
       include: {
         dishes: {
@@ -81,12 +82,7 @@ export async function GET() {
       })
     );
 
-    return NextResponse.json({ categories: transformedCategories });
-  } catch (error) {
-    console.error("Failed to fetch menu:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch menu data" },
-      { status: 500 }
-    );
-  }
-}
+    return apiSuccess({ categories: transformedCategories });
+  },
+  { requireAuth: true }
+);

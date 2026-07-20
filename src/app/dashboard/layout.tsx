@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
+import { useShallow } from 'zustand/react/shallow';
 import {
   BarChart3,
   UtensilsCrossed,
@@ -32,7 +33,15 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { isAuthenticated, setView, view, user, setUser } = useStore();
+  const { isAuthenticated, setView, view, user, setUser } = useStore(
+    useShallow((state) => ({
+      isAuthenticated: state.isAuthenticated,
+      setView: state.setView,
+      view: state.view,
+      user: state.user,
+      setUser: state.setUser,
+    }))
+  );
 
   // Redirect to login if not authenticated
   useEffect(() => {

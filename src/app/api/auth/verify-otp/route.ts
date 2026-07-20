@@ -1,15 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyOTP } from '@/lib/otp-store';
 import { db } from '@/lib/db';
+import { rateLimit } from '@/lib/rate-limit';
 import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: 10 attempts per 10 minutes
+    const limiter = rateLimit(req, { intervalMs: 60000 * 10, maxRequests: 10 });
+    if (!limiter.success) {
+      return NextResponse.json(
+        { success: false, message: 'تم تجاوز حد المحاولات المسموح به. يرجى المحاولة لاحقاً.' },
+        { status: 429 }
+      );
+    }
+
     const { phone, code } = await req.json();
 
-    if (!phone || !code) {
+    if (!phone || !code || typeof phone !== 'string' || typeof code !== 'string') {
       return NextResponse.json(
-        { success: false, message: 'رقم الجوال ورمز التحقق مطلوبان' },
+        { success: false, message: 'رقم الجوال ورمز التحقق مطلوبان وصالحان' },
+        { status: 400 }
+      );
+    }
+
+    if (!/^\+\d{10,15}$/.test(phone) || !/^\d{6}$/.test(code)) {
+      return NextResponse.json(
+        { success: false, message: 'البيانات المرسلة غير صالحة' },
         { status: 400 }
       );
     }

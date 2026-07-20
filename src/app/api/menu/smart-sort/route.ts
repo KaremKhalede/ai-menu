@@ -1,16 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { rateLimit } from '@/lib/rate-limit';
 import {
   calculateDishPerformance,
   smartSortDishes,
   getSortRecommendation,
-  type SmartSortResult,
-  type DishPerformance,
 } from '@/lib/smart-sort';
 import type { SortCriteria, Dish } from '@/lib/types';
-
-/* ------------------------------------------------------------------ */
-/*  Demo dishes for testing                                            */
-/* ------------------------------------------------------------------ */
+import { 
+  withApiHandler, 
+  apiSuccess, 
+  RateLimitError, 
+  validateBody,
+  TenantRoles 
+} from '@/lib/api-framework';
+import { z } from 'zod';
 
 const DEMO_DISHES: Dish[] = [
   { id: 'd1', name: 'كبسة لحم', description: 'كبسة لحم طازجة بالأرز البسمتي', price: 55, categoryId: 'cat1', rating: 4.8, orderCount: 245, tags: ['رئيسي'], isAvailable: true, isFeatured: true, addons: [{ name: 'سمنة إضافية', price: 5 }], pairings: ['سلطة خضراء', 'مشروب غازي'] },
@@ -31,38 +34,33 @@ const DEMO_DISHES: Dish[] = [
   { id: 'd16', name: 'قهوة عربية', description: 'قهوة عربية بالهيل والزعفران', price: 10, categoryId: 'cat5', rating: 4.3, orderCount: 267, tags: ['مشروبات'], isAvailable: true, isFeatured: true, addons: [], pairings: ['تمر'] },
 ];
 
-/* ------------------------------------------------------------------ */
-/*  Demo orders for performance calculation                           */
-/* ------------------------------------------------------------------ */
-
 const DEMO_ORDERS = DEMO_DISHES.map((d) => ({
   dishId: d.id,
   quantity: d.orderCount,
   totalPrice: d.price * d.orderCount,
 }));
 
-/* ------------------------------------------------------------------ */
-/*  POST /api/menu/smart-sort                                         */
-/* ------------------------------------------------------------------ */
+const smartSortSchema = z.object({
+  criteria: z.enum(['profitability', 'popularity', 'rating', 'ai_recommended', 'revenue'] as const).optional().default('profitability'),
+});
 
-const VALID_CRITERIA: SortCriteria[] = ['profitability', 'popularity', 'rating', 'ai_recommended', 'revenue'];
+export const POST = withApiHandler(
+  async (req, ctx) => {
+    // Rate limit: 20 sort requests per minute
+    const limiter = rateLimit(req as NextRequest, { intervalMs: 60000, maxRequests: 20 });
+    if (!limiter.success) {
+      throw new RateLimitError('تم تجاوز حد الطلبات. يرجى المحاولة بعد دقيقة.');
+    }
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const criteria: SortCriteria = VALID_CRITERIA.includes(body.criteria) ? body.criteria : 'profitability';
-    const _restaurantId = body.restaurantId || 'demo';
-
-    // Use demo dishes
-    const dishes = DEMO_DISHES;
+    const body = await validateBody(req, smartSortSchema);
+    const criteria = body.criteria;
 
     // Calculate performance metrics
-    const performance = calculateDishPerformance(dishes, DEMO_ORDERS);
+    const performance = calculateDishPerformance(DEMO_DISHES, DEMO_ORDERS);
 
     // Run smart sort
-    const sortResult = smartSortDishes(dishes, criteria, performance);
+    const sortResult = smartSortDishes(DEMO_DISHES, criteria, performance);
 
-    // Fix category names using a lookup
     const catNames: Record<string, string> = {
       cat1: 'أطباق رئيسية',
       cat2: 'مشويات',
@@ -74,10 +72,9 @@ export async function POST(req: NextRequest) {
       cat.categoryName = catNames[cat.categoryId] || cat.categoryName;
     }
 
-    // Get AI sort recommendation
     const recommendation = getSortRecommendation(performance);
 
-    return NextResponse.json({
+    return apiSuccess({
       criteria,
       sortedCategories: sortResult.sortedCategories,
       insights: sortResult.insights,
@@ -89,11 +86,9 @@ export async function POST(req: NextRequest) {
         totalRevenue: performance.reduce((s, p) => s + p.revenue, 0).toLocaleString('ar-SA') + ' ر.س',
       },
     });
-  } catch (error) {
-    console.error('Smart sort error:', error);
-    return NextResponse.json(
-      { error: 'حدث خطأ أثناء ترتيب القائمة الذكي' },
-      { status: 500 }
-    );
+  },
+  { 
+    requireAuth: true, 
+    allowedRoles: [TenantRoles.OWNER, TenantRoles.MANAGER] 
   }
-}
+);
